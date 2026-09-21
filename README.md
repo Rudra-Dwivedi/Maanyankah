@@ -1,6 +1,6 @@
-# मन्यांकः (Manyankah)
+# मान्यांकः (Maanyankah)
 
-A social platform that matches people by taste across movies, music, and sports, and helps groups decide what to watch or listen to together using a hybrid recommendation engine.
+A social cinema and taste platform that matches people by taste across movies, music, and sports, and helps groups decide what to watch or listen to together using a collaborative filtering recommendation engine and AI agent (चित्राङ्ककः).
 
 ---
 
@@ -16,17 +16,21 @@ A social platform that matches people by taste across movies, music, and sports,
   - Supports configurable strategies: **Average** (maximum group satisfaction) and **Least Misery** (minimizes worst-case disappointment).
   - Clean member picker filtered strictly to community members you actively follow.
 
+- **AI Cinema Agent (चित्राङ्ककः)**:
+  - Floating and full-screen studio assistant (`/agent/`).
+  - Analyzes real community rating distributions ($1★ \to 5★$ curves) and viewer sentiment.
+  - Conversational recommendations and film trivia.
+
 - **High-Definition Media Resolution**:
   - Automated artwork fetching: 1000px+ official theatrical studio posters (IMDb CDN), $1000 \times 1000$ Apple Music square covers, and transparent sports crests (TheSportsDB).
   - High-DPI / Retina anti-aliasing and optimized aspect ratios.
 
-- **User Profile Photos**:
-  - Every member can upload custom profile photos (PNG, JPG, WEBP) or link external image URLs (`/auth/profile`).
-  - Photos display seamlessly across navigation, public profiles, feed posts, group picks, and admin moderation tables.
-  - One-click removal reverts to initial-based colored avatars.
+- **Dynamic User Profile & Photos**:
+  - In-place dynamic modal for profile photo (DP) uploads and bio editing with instant preview.
+  - Asynchronous AJAX updates without full page reloads.
 
 - **Community Feed & Sentiment Analysis**:
-  - Live feed (`/feed/`) with polarity scoring and sentiment classification.
+  - Live feed (`/feed/`) with NLP polarity scoring and sentiment classification.
   - Admin announcements pinned to the top of the feed.
 
 - **Admin Governance & Moderation**:
@@ -43,8 +47,8 @@ A social platform that matches people by taste across movies, music, and sports,
 ### 1. Clone & Install Dependencies
 
 ```bash
-git clone <repository-url>
-cd fan_network
+git clone https://github.com/Rudra-Dwivedi/maanyankah.git
+cd maanyankah
 pip install -r requirements.txt
 ```
 
@@ -67,7 +71,7 @@ python create_admin.py
 
 ## Deploy to Railway
 
-Deploying मन्यांकः (Manyankah) live to [Railway](https://railway.app) takes less than 2 minutes:
+Deploying मान्यांकः (Maanyankah) live to [Railway](https://railway.app) takes less than 2 minutes:
 
 1. **Push your code to GitHub**:
    Ensure your latest changes are pushed to your repository: `git push origin main`.
@@ -75,7 +79,7 @@ Deploying मन्यांकः (Manyankah) live to [Railway](https://railway
 2. **Create a New Project on Railway**:
    - Go to [railway.app](https://railway.app) and log in with your GitHub account.
    - Click **+ New Project** $\rightarrow$ **Deploy from GitHub repo**.
-   - Choose your repository: `Rudra-Dwivedi/Fan-network`.
+   - Choose your repository: `Rudra-Dwivedi/maanyankah`.
    - Railway will automatically detect Python, install dependencies via `requirements.txt`, and launch the production Gunicorn server via `Procfile` and `railway.json`.
 
 3. **Configure Environment Variables** *(Recommended)*:
@@ -83,18 +87,18 @@ Deploying मन्यांकः (Manyankah) live to [Railway](https://railway
    - `SECRET_KEY`: Any secret random string for secure session encryption.
    - `ADMIN_USERNAME`: Your chosen admin username (e.g. `admin`).
    - `ADMIN_PASSWORD`: Your chosen admin password (e.g. `admin123`).
-   *On first launch, Fan Network will automatically provision your admin account and seed starter catalog items with HD artwork!*
+   *On first launch, Maanyankah will automatically provision your admin account and seed starter catalog items with HD artwork!*
 
 4. **Generate Public URL**:
    - In your Railway service dashboard $\rightarrow$ **Settings** $\rightarrow$ **Networking**, click **Generate Domain**.
-   - Your live website URL (e.g. `https://fan-network-production.up.railway.app`) is ready to share!
+   - Your live website URL is ready to share!
 
 ---
 
 ## Project Structure
 
 ```
-fan_network/
+maanyankah/
 ├── app/
 │   ├── __init__.py          # Flask application factory
 │   ├── db.py                # Database connection & schema migrations

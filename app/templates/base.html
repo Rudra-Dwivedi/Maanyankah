@@ -26,6 +26,7 @@
       </a>
       <nav class="site-nav">
         <a href="{{ url_for('items.browse') }}">Browse</a>
+        <a href="{{ url_for('collections.index') }}">Collections</a>
         <a href="{{ url_for('agent.index') }}">चित्राङ्कः</a>
         <a href="{{ url_for('feed.feed') }}">Feed</a>
         {% if g.user %}

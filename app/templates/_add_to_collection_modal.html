@@ -1,0 +1,249 @@
+{% if g.user %}
+<!-- Quick Add to Collection Modal -->
+<div id="quick-collection-modal" class="profile-modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="quick-col-title">
+  <div class="profile-modal-card quick-col-modal-card">
+    <div class="profile-modal-header">
+      <div class="modal-title-col">
+        <h3 id="quick-col-title" class="profile-modal-title">Add to Collection</h3>
+        <span id="quick-col-item-name" class="profile-modal-sub">Select a collection</span>
+      </div>
+      <button type="button" id="closeQuickColModal" class="profile-modal-close-btn" aria-label="Close">✕</button>
+    </div>
+
+    <div class="quick-col-modal-body">
+      <!-- Loading indicator -->
+      <div id="quickColLoading" class="quick-col-loading" style="display: none;">
+        <span>⏳ Loading your collections...</span>
+      </div>
+
+      <!-- Collections list -->
+      <div id="quickColList" class="quick-col-list"></div>
+
+      <!-- Empty state if user has no collections yet -->
+      <div id="quickColEmpty" class="quick-col-empty" style="display: none;">
+        <p>You don't have any collections yet. Create your first one below!</p>
+      </div>
+
+      <!-- Inline Create Collection Form -->
+      <div class="quick-col-create-section">
+        <label for="inlineNewColTitle" class="quick-create-label">Or create a new collection:</label>
+        <div class="quick-create-input-group">
+          <input type="text" id="inlineNewColTitle" class="form-input" placeholder="Collection title..." maxlength="100">
+          <button type="button" id="inlineCreateColBtn" class="btn btn-small">
+            + Create & Add
+          </button>
+        </div>
+        <div id="inlineCreateError" class="text-danger" style="display: none; font-size: 0.8rem; margin-top: 0.3rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating Toast Notification -->
+<div id="colToast" class="collection-toast" style="display: none;"></div>
+
+<script>
+  (function() {
+    let currentItemId = null;
+    let currentItemTitle = '';
+
+    const modal = document.getElementById('quick-collection-modal');
+    const closeBtn = document.getElementById('closeQuickColModal');
+    const itemNameEl = document.getElementById('quick-col-item-name');
+    const loadingEl = document.getElementById('quickColLoading');
+    const listEl = document.getElementById('quickColList');
+    const emptyEl = document.getElementById('quickColEmpty');
+    const inlineInput = document.getElementById('inlineNewColTitle');
+    const inlineBtn = document.getElementById('inlineCreateColBtn');
+    const inlineError = document.getElementById('inlineCreateError');
+    const toast = document.getElementById('colToast');
+
+    function showToast(msg) {
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      toast.classList.add('toast-visible');
+      setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        setTimeout(() => { toast.style.display = 'none'; }, 300);
+      }, 2500);
+    }
+
+    function openModal(itemId, title) {
+      currentItemId = itemId;
+      currentItemTitle = title;
+      if (itemNameEl) itemNameEl.textContent = title;
+      if (modal) modal.style.display = 'flex';
+      if (inlineInput) inlineInput.value = '';
+      if (inlineError) inlineError.style.display = 'none';
+      loadUserCollections();
+    }
+
+    function closeModal() {
+      if (modal) modal.style.display = 'none';
+      currentItemId = null;
+    }
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+      });
+    }
+
+    // Attach listeners to all "+ Collection" buttons on page
+    document.querySelectorAll('.btn-item-collection-quick').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const itemId = parseInt(this.getAttribute('data-item-id'), 10);
+        const title = this.getAttribute('data-item-title') || '';
+        if (itemId) openModal(itemId, title);
+      });
+    });
+
+    function loadUserCollections() {
+      if (!loadingEl || !listEl || !currentItemId) return;
+      loadingEl.style.display = 'block';
+      listEl.style.display = 'none';
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      fetch(`/collections/api/user-collections?item_id=${currentItemId}`)
+        .then(res => res.json())
+        .then(data => {
+          loadingEl.style.display = 'none';
+          listEl.style.display = 'block';
+          listEl.innerHTML = '';
+
+          if (!data.collections || data.collections.length === 0) {
+            if (emptyEl) emptyEl.style.display = 'block';
+            return;
+          }
+
+          data.collections.forEach(col => {
+            const itemRow = document.createElement('div');
+            itemRow.className = 'quick-col-row' + (col.has_item ? ' in-collection' : '');
+            itemRow.innerHTML = `
+              <div class="col-row-info">
+                <span class="col-row-title">${escapeColHtml(col.title)}</span>
+                <span class="col-row-meta">${col.item_count} ${col.item_count === 1 ? 'item' : 'items'} ${col.is_public ? '• 🌍' : '• 🔒'}</span>
+              </div>
+              <button type="button" class="btn-toggle-col-item ${col.has_item ? 'btn-col-checked' : 'btn-col-unchecked'}">
+                ${col.has_item ? '✓ In Collection' : '+ Add'}
+              </button>
+            `;
+
+            const btn = itemRow.querySelector('.btn-toggle-col-item');
+            btn.addEventListener('click', function() {
+              toggleItem(col.id, btn, itemRow);
+            });
+
+            listEl.appendChild(itemRow);
+          });
+        })
+        .catch(err => {
+          loadingEl.style.display = 'none';
+          listEl.style.display = 'block';
+          listEl.innerHTML = `<p class="text-danger" style="font-size: 0.85rem;">Failed to load collections: ${escapeColHtml(err.message)}</p>`;
+        });
+    }
+
+    function toggleItem(collectionId, btn, row) {
+      if (!currentItemId) return;
+      btn.disabled = true;
+
+      fetch('/collections/api/toggle-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: currentItemId, collection_id: collectionId })
+      })
+      .then(res => res.json())
+      .then(data => {
+        btn.disabled = false;
+        if (data.success) {
+          if (data.in_collection) {
+            btn.className = 'btn-toggle-col-item btn-col-checked';
+            btn.textContent = '✓ In Collection';
+            row.classList.add('in-collection');
+          } else {
+            btn.className = 'btn-toggle-col-item btn-col-unchecked';
+            btn.textContent = '+ Add';
+            row.classList.remove('in-collection');
+          }
+          showToast(data.message);
+        } else {
+          showToast(data.error || 'Operation failed');
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        showToast('Error: ' + err.message);
+      });
+    }
+
+    // Inline create collection & add item
+    if (inlineBtn && inlineInput) {
+      inlineBtn.addEventListener('click', function() {
+        const title = inlineInput.value.trim();
+        if (!title) {
+          if (inlineError) {
+            inlineError.textContent = 'Please enter a collection title';
+            inlineError.style.display = 'block';
+          }
+          inlineInput.focus();
+          return;
+        }
+
+        if (inlineError) inlineError.style.display = 'none';
+        inlineBtn.disabled = true;
+
+        fetch('/collections/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: title,
+            is_public: true,
+            initial_item_id: currentItemId
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          inlineBtn.disabled = false;
+          if (data.success) {
+            inlineInput.value = '';
+            showToast(data.message);
+            loadUserCollections();
+          } else {
+            if (inlineError) {
+              inlineError.textContent = data.error || 'Failed to create collection';
+              inlineError.style.display = 'block';
+            }
+          }
+        })
+        .catch(err => {
+          inlineBtn.disabled = false;
+          if (inlineError) {
+            inlineError.textContent = err.message;
+            inlineError.style.display = 'block';
+          }
+        });
+      });
+
+      inlineInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          inlineBtn.click();
+        }
+      });
+    }
+
+    function escapeColHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  })();
+</script>
+{% endif %}

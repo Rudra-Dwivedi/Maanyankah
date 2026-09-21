@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% block title %}{{ collection['title'] }} — Collection by @{{ collection['username'] }}{% endblock %}
+{% block content %}
+<div class="container page">
+
+  <!-- Breadcrumb Navigation -->
+  <div class="collection-breadcrumb">
+    <a href="{{ url_for('collections.index') }}">← All Collections</a>
+  </div>
+
+  <!-- Collection Hero Header -->
+  <header class="collection-hero-card">
+    <div class="collection-hero-main">
+      <div class="collection-hero-info">
+        <div class="collection-hero-badges">
+          <span class="badge-accent">COLLECTION</span>
+          {% if not collection['is_public'] %}
+            <span class="badge-privacy-lock">🔒 Private</span>
+          {% else %}
+            <span class="badge-privacy-public">🌍 Public</span>
+          {% endif %}
+        </div>
+
+        <h1 class="collection-hero-title">{{ collection['title'] }}</h1>
+
+        {% if collection['description'] %}
+          <p class="collection-hero-desc">{{ collection['description'] }}</p>
+        {% endif %}
+
+        <!-- Creator & Meta Row -->
+        <div class="collection-hero-meta">
+          <a href="{{ url_for('recommend.profile', username=collection['username']) }}" class="collection-hero-creator">
+            <div class="avatar avatar-sm avatar-{{ collection['user_id'] % 3 }}">
+              {% if collection['avatar_url'] %}
+                <img src="{{ collection['avatar_url'] }}" alt="{{ collection['username'] }}">
+              {% else %}
+                {{ collection['username'][0]|upper }}
+              {% endif %}
+            </div>
+            <span>Curated by <strong>@{{ collection['username'] }}</strong></span>
+          </a>
+          <span class="meta-dot">•</span>
+          <span class="meta-stat"><strong>{{ items|length }}</strong> {{ 'item' if items|length == 1 else 'items' }}</span>
+          {% if movie_count > 0 %}
+            <span class="meta-dot">•</span>
+            <span class="meta-stat">🎬 {{ movie_count }} {{ 'movie' if movie_count == 1 else 'movies' }}</span>
+          {% endif %}
+          {% if song_count > 0 %}
+            <span class="meta-dot">•</span>
+            <span class="meta-stat">🎵 {{ song_count }} {{ 'song' if song_count == 1 else 'songs' }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Owner Actions -->
+      {% if is_owner %}
+        <div class="collection-hero-actions">
+          <button type="button" class="btn btn-small btn-ghost" id="openEditColBtn">
+            ✏️ Edit Details
+          </button>
+          <form method="post" action="{{ url_for('collections.delete', collection_id=collection['id']) }}" onsubmit="return confirm('Are you sure you want to delete this entire collection? This cannot be undone.');">
+            <button type="submit" class="btn btn-small btn-ghost text-danger">
+              🗑️ Delete
+            </button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- Owner: Quick Add Items Accordion / Bar -->
+  {% if is_owner and catalog_items and catalog_items|length > 0 %}
+    <section class="collection-quick-add-card">
+      <div class="quick-add-header">
+        <div>
+          <h3>✨ Add Movies & Songs to this Collection</h3>
+          <p class="text-muted-sm">Search your catalog to instantly expand this playlist.</p>
+        </div>
+        <input type="text" id="catalogSearchInput" class="form-input quick-add-search" placeholder="Filter movies & songs by title...">
+      </div>
+
+      <div class="quick-add-scroll-grid" id="catalogSearchList">
+        {% for cat_item in catalog_items %}
+          <div class="quick-add-item-chip" data-title="{{ cat_item['title']|lower }}">
+            <div class="chip-media">
+              {% if cat_item.image_url %}
+                <img src="{{ cat_item.image_url }}" alt="{{ cat_item['title'] }}" loading="lazy">
+              {% else %}
+                <span>{% if cat_item['type'] == 'movie' %}🎬{% elif cat_item['type'] == 'song' %}🎵{% else %}🏆{% endif %}</span>
+              {% endif %}
+            </div>
+            <div class="chip-info">
+              <strong class="chip-title">{{ cat_item['title'] }}</strong>
+              <span class="chip-type">{{ cat_item['type'] }}</span>
+            </div>
+            <form method="post" action="{{ url_for('collections.add_item', collection_id=collection['id']) }}" class="chip-form">
+              <input type="hidden" name="item_id" value="{{ cat_item['id'] }}">
+              <button type="submit" class="btn-ghost btn-xs btn-chip-add" title="Add to collection">
+                + Add
+              </button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <!-- Collection Items Grid -->
+  <section class="collection-items-section">
+    <div class="section-head-row">
+      <h2>Collection Content ({{ items|length }})</h2>
+    </div>
+
+    {% if items|length == 0 %}
+      <div class="empty-state">
+        <p>This collection is currently empty.</p>
+        {% if is_owner %}
+          <p class="empty-sub">Use the search bar above or browse the catalog to add movies and songs.</p>
+          <a href="{{ url_for('items.browse') }}" class="btn btn-small" style="margin-top: 0.8rem;">Browse Catalog</a>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="item-grid">
+        {% for item in items %}
+          {% set current = user_ratings.get(item['id']) %}
+          <div class="item-card item-card-{{ item['type'] }}">
+            <div class="item-media">
+              {% if item.image_url %}
+                <img src="{{ item.image_url }}" alt="{{ item['title'] }}" loading="lazy">
+              {% else %}
+                <div class="item-placeholder">
+                  {% if item['type'] == 'movie' %}🎬{% elif item['type'] == 'song' %}🎵{% else %}🏆{% endif %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="item-card-body">
+              <div class="item-type-row">
+                <span class="item-type">{{ item['type'] }}</span>
+                {% if is_owner %}
+                  <form method="post" action="{{ url_for('collections.remove_item', collection_id=collection['id'], item_id=item['id']) }}" onsubmit="return confirm('Remove {{ item.title }} from this collection?');">
+                    <button type="submit" class="btn-item-remove-col" title="Remove from this collection">
+                      ✕ Remove
+                    </button>
+                  </form>
+                {% endif %}
+              </div>
+
+              <h3>{{ item['title'] }}</h3>
+
+              <!-- Clickable Genre Badges -->
+              {% if item.parsed_genres %}
+                <div class="item-genres-tray">
+                  {% for tag in item.parsed_genres %}
+                    <a href="{{ url_for('items.browse', type=item['type'], genre=tag) }}" class="genre-tag-chip" title="Browse {{ tag }}">
+                      #{{ tag }}
+                    </a>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <div class="item-avg-score-row" title="Community Average Rating">
+                {% if item['rating_count'] > 0 %}
+                  <span class="star-gold">★</span>
+                  <strong class="item-avg-num">{{ item['avg_rating'] }}</strong>
+                  <span class="item-rating-count">({{ item['rating_count'] }} {{ 'rating' if item['rating_count'] == 1 else 'ratings' }})</span>
+                {% else %}
+                  <span class="item-rating-none">No ratings yet</span>
+                {% endif %}
+              </div>
+
+              {% if item.note %}
+                <div class="collection-item-note">
+                  💬 <em>"{{ item.note }}"</em>
+                </div>
+              {% endif %}
+
+              {% if item['type'] == 'movie' %}
+                <div class="item-agent-link-wrap">
+                  <a href="{{ url_for('agent.index', q=item['title']) }}" class="btn-ask-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ item.title|replace('\'', '\\\'') }}'); return false; }" title="चित्राङ्कः से पूछें (Ask चित्राङ्कः)">
+                    🤖 चित्राङ्कः
+                  </a>
+                </div>
+              {% endif %}
+
+              {% if g.user %}
+                <form method="post" action="{{ url_for('items.rate', item_id=item['id']) }}" class="rate-form">
+                  <div class="star-rating-wrap">
+                    <div class="star-rating" title="Select 1-5 stars">
+                      {% for r in [5, 4, 3, 2, 1] %}
+                        <input type="radio" id="r{{ r }}-{{ item['id'] }}" name="rating" value="{{ r }}" {{ 'checked' if current == r }}>
+                        <label for="r{{ r }}-{{ item['id'] }}" title="{{ r }} star{% if r > 1 %}s{% endif %}">★</label>
+                      {% endfor %}
+                    </div>
+                    {% if current %}
+                      <span class="user-rated-pill" title="Your rating: {{ current }} / 5">★ {{ current }}/5</span>
+                    {% endif %}
+                  </div>
+                  <button type="submit" class="btn-ghost">{{ 'Update' if current else 'Rate' }}</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+
+{% if is_owner %}
+<!-- Edit Collection Modal -->
+<div id="edit-collection-modal" class="profile-modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="edit-col-heading">
+  <div class="profile-modal-card collection-modal-card">
+    <div class="profile-modal-header">
+      <div class="modal-title-col">
+        <h3 id="edit-col-heading" class="profile-modal-title">Edit Collection</h3>
+        <span class="profile-modal-sub">Update title, description, or visibility</span>
+      </div>
+      <button type="button" id="closeEditColModal" class="profile-modal-close-btn" aria-label="Close">✕</button>
+    </div>
+
+    <form method="post" action="{{ url_for('collections.edit', collection_id=collection['id']) }}" class="collection-form">
+      <div class="modal-field-group">
+        <label for="editColTitle" class="modal-field-label">Collection Title <span class="text-danger">*</span></label>
+        <input type="text" id="editColTitle" name="title" class="form-input" value="{{ collection['title'] }}" required maxlength="100">
+      </div>
+
+      <div class="modal-field-group">
+        <label for="editColDesc" class="modal-field-label">Description</label>
+        <textarea id="editColDesc" name="description" class="form-textarea" rows="3">{{ collection['description'] or '' }}</textarea>
+      </div>
+
+      <div class="modal-field-group checkbox-group">
+        <label class="custom-checkbox-label">
+          <input type="checkbox" name="is_public" value="1" {{ 'checked' if collection['is_public'] else '' }}>
+          <span class="checkbox-text">Public Collection (visible to community & on your profile)</span>
+        </label>
+      </div>
+
+      <div class="modal-actions-row">
+        <button type="button" id="cancelEditColModal" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const editModal = document.getElementById('edit-collection-modal');
+    const openEditBtn = document.getElementById('openEditColBtn');
+    const closeEditBtn = document.getElementById('closeEditColModal');
+    const cancelEditBtn = document.getElementById('cancelEditColModal');
+
+    function openModal() {
+      if (editModal) editModal.style.display = 'flex';
+    }
+    function closeModal() {
+      if (editModal) editModal.style.display = 'none';
+    }
+
+    if (openEditBtn) openEditBtn.addEventListener('click', openModal);
+    if (closeEditBtn) closeEditBtn.addEventListener('click', closeModal);
+    if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeModal);
+
+    if (editModal) {
+      editModal.addEventListener('click', function(e) {
+        if (e.target === editModal) closeModal();
+      });
+    }
+
+    // Catalog quick search filter
+    const searchInput = document.getElementById('catalogSearchInput');
+    const searchList = document.getElementById('catalogSearchList');
+    if (searchInput && searchList) {
+      searchInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        const chips = searchList.querySelectorAll('.quick-add-item-chip');
+        chips.forEach(chip => {
+          const title = chip.getAttribute('data-title') || '';
+          if (!query || title.includes(query)) {
+            chip.style.display = 'flex';
+          } else {
+            chip.style.display = 'none';
+          }
+        });
+      });
+    }
+  });
+</script>
+{% endif %}
+
+{% endblock %}

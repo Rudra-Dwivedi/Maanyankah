@@ -21,6 +21,17 @@ A social cinema and taste platform that matches people by taste across movies, m
   - Analyzes real community rating distributions ($1★ \to 5★$ curves) and viewer sentiment.
   - Conversational recommendations and film trivia.
 
+- **Curated Collections (Playlists / Watchlists)**:
+  - Create and share themed collections (`/collections/`) mixing movies and songs (e.g., "Late Night Sci-Fi", "Synthwave & Cinema").
+  - 4-thumbnail artwork preview mosaic, community explore hub, and private collection support.
+  - Interactive 1-click "+ Collection" modal on browse item cards to toggle items or create collections inline.
+  - Featured on public user profiles (`/recommend/user/<username>`).
+
+- **Genre-Wise Dynamic Filtering**:
+  - Browse movies and music filtered by genre tags (`/items/?type=movie&genre=sci-fi`, `/items/?type=song&genre=pop`).
+  - Interactive genre pill bar with live item count badges.
+  - Clickable genre tag chips on item cards for instant deep filtering.
+
 - **High-Definition Media Resolution**:
   - Automated artwork fetching: 1000px+ official theatrical studio posters (IMDb CDN), $1000 \times 1000$ Apple Music square covers, and transparent sports crests (TheSportsDB).
   - High-DPI / Retina anti-aliasing and optimized aspect ratios.

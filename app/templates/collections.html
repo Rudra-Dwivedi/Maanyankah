@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Collections — मान्यांकः (Maanyankah){% endblock %}
+{% block content %}
+<div class="container page">
+
+  <!-- Page Header -->
+  <div class="collections-page-head">
+    <div class="head-text-col">
+      <h1>Collections</h1>
+      <p class="page-sub">Curated themed playlists and watchlists of movies and songs crafted by the community.</p>
+    </div>
+    {% if g.user %}
+      <div class="head-action-col">
+        <button type="button" class="btn btn-small" id="openCreateCollectionBtn">
+          ✨ + New Collection
+        </button>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="collections-nav-tabs">
+    <a href="{{ url_for('collections.index', tab='explore') }}" class="col-tab-link {{ 'active' if active_tab != 'my' }}">
+      🌍 Explore Community ({{ public_collections|length }})
+    </a>
+    {% if g.user %}
+      <a href="{{ url_for('collections.index', tab='my') }}" class="col-tab-link {{ 'active' if active_tab == 'my' }}">
+        📁 My Collections ({{ my_collections|length }})
+      </a>
+    {% endif %}
+  </div>
+
+  <!-- Active List View -->
+  {% set current_list = my_collections if active_tab == 'my' else public_collections %}
+
+  {% if current_list|length == 0 %}
+    <div class="empty-state">
+      {% if active_tab == 'my' %}
+        <p>You haven't created any collections yet.</p>
+        <p class="empty-sub">Group your favorite cinema masterpieces and top music tracks into custom collections.</p>
+        <button type="button" class="btn btn-small" id="emptyCreateCollectionBtn" style="margin-top: 1rem;">
+          Create your first collection
+        </button>
+      {% else %}
+        <p>No community collections yet.</p>
+        <p class="empty-sub">Be the first to curate and share a collection with fellow fans!</p>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="collections-grid">
+      {% for col in current_list %}
+        {% set imgs = previews.get(col['id'], []) %}
+        <article class="collection-card">
+          <a href="{{ url_for('collections.detail', collection_id=col['id']) }}" class="collection-card-link">
+            <!-- Artwork Mosaic (Up to 4 images in 2x2 grid) -->
+            <div class="collection-mosaic {{ 'mosaic-single' if imgs|length == 1 else ('mosaic-dual' if imgs|length == 2 else ('mosaic-tri' if imgs|length == 3 else 'mosaic-quad')) }}">
+              {% if imgs|length > 0 %}
+                {% for img_url in imgs %}
+                  <div class="mosaic-tile">
+                    <img src="{{ img_url }}" alt="" loading="lazy">
+                  </div>
+                {% endfor %}
+                {% for pad in range(4 - imgs|length) %}
+                  <div class="mosaic-tile mosaic-tile-empty">
+                    <span>🎬</span>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="mosaic-tile-placeholder">
+                  <span>📂</span>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="collection-card-body">
+              <div class="collection-badge-row">
+                <span class="collection-count-badge">
+                  {{ col['item_count'] }} {{ 'item' if col['item_count'] == 1 else 'items' }}
+                </span>
+                {% if not col['is_public'] %}
+                  <span class="collection-privacy-pill" title="Private collection">🔒 Private</span>
+                {% endif %}
+              </div>
+
+              <h2 class="collection-card-title">{{ col['title'] }}</h2>
+              {% if col['description'] %}
+                <p class="collection-card-desc">{{ col['description'] }}</p>
+              {% endif %}
+
+              <div class="collection-meta-breakdown">
+                {% if col['movie_count'] > 0 %}
+                  <span class="breakdown-tag">🎬 {{ col['movie_count'] }} {{ 'movie' if col['movie_count'] == 1 else 'movies' }}</span>
+                {% endif %}
+                {% if col['song_count'] > 0 %}
+                  <span class="breakdown-tag">🎵 {{ col['song_count'] }} {{ 'song' if col['song_count'] == 1 else 'songs' }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </a>
+
+          <!-- Card Footer with Creator Attribution -->
+          <div class="collection-card-footer">
+            <a href="{{ url_for('recommend.profile', username=col['username']) }}" class="collection-creator-link">
+              <div class="avatar avatar-xs avatar-{{ col['user_id'] % 3 }}">
+                {% if col['avatar_url'] %}
+                  <img src="{{ col['avatar_url'] }}" alt="{{ col['username'] }}">
+                {% else %}
+                  {{ col['username'][0]|upper }}
+                {% endif %}
+              </div>
+              <span class="creator-name">@{{ col['username'] }}</span>
+            </a>
+            <span class="collection-updated-date">
+              {{ col['updated_at'][:10] if col['updated_at'] else '' }}
+            </span>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+</div>
+
+{% if g.user %}
+<!-- Create New Collection Modal -->
+<div id="create-collection-modal" class="profile-modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="create-col-heading">
+  <div class="profile-modal-card collection-modal-card">
+    <div class="profile-modal-header">
+      <div class="modal-title-col">
+        <h3 id="create-col-heading" class="profile-modal-title">Create New Collection</h3>
+        <span class="profile-modal-sub">Curate movies & music together</span>
+      </div>
+      <button type="button" id="closeCreateColModal" class="profile-modal-close-btn" aria-label="Close">✕</button>
+    </div>
+
+    <form method="post" action="{{ url_for('collections.create') }}" class="collection-form">
+      <div class="modal-field-group">
+        <label for="newColTitle" class="modal-field-label">Collection Title <span class="text-danger">*</span></label>
+        <input type="text" id="newColTitle" name="title" class="form-input" placeholder="e.g. Late Night Sci-Fi & Synthwave" required maxlength="100">
+      </div>
+
+      <div class="modal-field-group">
+        <label for="newColDesc" class="modal-field-label">Description (optional)</label>
+        <textarea id="newColDesc" name="description" class="form-textarea" rows="3" placeholder="What is the mood, theme, or story behind this collection?"></textarea>
+      </div>
+
+      <div class="modal-field-group checkbox-group">
+        <label class="custom-checkbox-label">
+          <input type="checkbox" name="is_public" value="1" checked>
+          <span class="checkbox-text">Public Collection (visible to community & on your profile)</span>
+        </label>
+      </div>
+
+      <div class="modal-actions-row">
+        <button type="button" id="cancelCreateColModal" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn">Create Collection</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('create-collection-modal');
+    const openBtn = document.getElementById('openCreateCollectionBtn');
+    const emptyOpenBtn = document.getElementById('emptyCreateCollectionBtn');
+    const closeBtn = document.getElementById('closeCreateColModal');
+    const cancelBtn = document.getElementById('cancelCreateColModal');
+    const titleInput = document.getElementById('newColTitle');
+
+    function openModal() {
+      if (modal) {
+        modal.style.display = 'flex';
+        if (titleInput) {
+          setTimeout(() => titleInput.focus(), 50);
+        }
+      }
+    }
+
+    function closeModal() {
+      if (modal) modal.style.display = 'none';
+    }
+
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (emptyOpenBtn) emptyOpenBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+      });
+    }
+  });
+</script>
+{% endif %}
+
+{% endblock %}

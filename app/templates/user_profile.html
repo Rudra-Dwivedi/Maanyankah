@@ -61,6 +61,8 @@
           <span><strong>{{ followers_count }}</strong> followers</span>
           <span class="stat-divider">•</span>
           <span><strong>{{ following_count }}</strong> following</span>
+          <span class="stat-divider">•</span>
+          <span><strong>{{ collections|length }}</strong> collections</span>
         </div>
       </div>
 
@@ -85,6 +87,36 @@
       </div>
     </div>
   </div>
+
+  <!-- Curated Collections Section -->
+  {% if collections and collections|length > 0 %}
+    <section class="profile-collections-section">
+      <div class="profile-collections-head">
+        <h2 class="section-title-sm">📁 Curated Collections ({{ collections|length }})</h2>
+        {% if g.user and g.user['id'] == profile_user['id'] %}
+          <a href="{{ url_for('collections.index', tab='my') }}" class="btn-ghost btn-xs">+ Manage Collections</a>
+        {% endif %}
+      </div>
+      <div class="profile-collections-scroller">
+        {% for c in collections %}
+          <a href="{{ url_for('collections.detail', collection_id=c['id']) }}" class="profile-col-card">
+            <div class="profile-col-header">
+              <strong class="profile-col-title">{{ c['title'] }}</strong>
+              <span class="profile-col-items-count">{{ c['item_count'] }} {{ 'item' if c['item_count'] == 1 else 'items' }}</span>
+            </div>
+            {% if c['description'] %}
+              <p class="profile-col-desc">{{ c['description'] }}</p>
+            {% endif %}
+            <div class="profile-col-meta">
+              {% if c['movie_count'] > 0 %}<span>🎬 {{ c['movie_count'] }} {{ 'movie' if c['movie_count'] == 1 else 'movies' }}</span>{% endif %}
+              {% if c['song_count'] > 0 %}<span>🎵 {{ c['song_count'] }} {{ 'song' if c['song_count'] == 1 else 'songs' }}</span>{% endif %}
+              {% if not c['is_public'] %}<span class="badge-lock">🔒 Private</span>{% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
 
   <!-- Profile Content Columns -->
   <div class="profile-layout-grid">

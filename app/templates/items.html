@@ -15,10 +15,39 @@
     <a href="{{ url_for('items.browse', type='team') }}" class="{{ 'active' if active_type == 'team' }}">Sports</a>
   </div>
 
+  <!-- Genre Filter Pill Bar -->
+  {% if available_genres and available_genres|length > 0 %}
+    <div class="genre-filter-container">
+      <div class="genre-filter-scroll">
+        <a href="{{ url_for('items.browse', type=active_type) }}" class="genre-pill {{ 'active' if not active_genre }}">
+          All Genres
+        </a>
+        {% for g in available_genres %}
+          <a href="{{ url_for('items.browse', type=active_type, genre=g.tag) }}" class="genre-pill {{ 'active' if active_genre == g.tag }}">
+            {{ g.label }}
+            <span class="genre-pill-count">{{ g.count }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Active Filter Notification / Reset Bar -->
+  {% if active_genre %}
+    <div class="active-filter-bar">
+      <span>Filtering by genre: <strong>{{ active_genre|title }}</strong> ({{ items|length }} {{ 'item' if items|length == 1 else 'items' }})</span>
+      <a href="{{ url_for('items.browse', type=active_type) }}" class="btn-clear-genre" title="Remove genre filter">✕ Clear genre filter</a>
+    </div>
+  {% endif %}
+
   {% if items|length == 0 %}
     <div class="empty-state">
-      <p>No items yet.</p>
-      <p class="empty-sub">Load some via the TMDB/Spotify/sports clients in <code>app/services/</code>, or insert a few rows manually to test with.</p>
+      <p>No items found{% if active_genre %} for genre "{{ active_genre|title }}"{% endif %}.</p>
+      {% if active_genre %}
+        <p><a href="{{ url_for('items.browse', type=active_type) }}" class="btn btn-small">Show all {{ active_type or 'items' }}</a></p>
+      {% else %}
+        <p class="empty-sub">Load some via the TMDB/Spotify/sports clients in <code>app/services/</code>, or insert a few rows manually to test with.</p>
+      {% endif %}
     </div>
   {% endif %}
 
@@ -36,8 +65,26 @@
           {% endif %}
         </div>
         <div class="item-card-body">
-          <span class="item-type">{{ item['type'] }}</span>
+          <div class="item-type-row">
+            <span class="item-type">{{ item['type'] }}</span>
+            {% if g.user and item['type'] in ('movie', 'song') %}
+              <button type="button" class="btn-item-collection-quick" data-item-id="{{ item['id'] }}" data-item-title="{{ item['title'] }}" data-item-type="{{ item['type'] }}" title="Add to collection">
+                📁 + Collection
+              </button>
+            {% endif %}
+          </div>
           <h3>{{ item['title'] }}</h3>
+
+          <!-- Clickable Genre Badges -->
+          {% if item.parsed_genres %}
+            <div class="item-genres-tray">
+              {% for tag in item.parsed_genres %}
+                <a href="{{ url_for('items.browse', type=item['type'], genre=tag) }}" class="genre-tag-chip {{ 'active' if active_genre == tag }}" title="Filter by {{ tag }}">
+                  #{{ tag }}
+                </a>
+              {% endfor %}
+            </div>
+          {% endif %}
 
           <div class="item-avg-score-row" title="Community Average Rating">
             {% if item['rating_count'] > 0 %}
@@ -78,4 +125,6 @@
   </div>
 
 </div>
+
+{% include "_add_to_collection_modal.html" %}
 {% endblock %}

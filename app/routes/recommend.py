@@ -165,6 +165,41 @@ def profile(username):
         ).fetchone()
         is_following = f is not None
 
+    # User collections
+    is_profile_owner = g.user is not None and (g.user["id"] == user["id"] or g.user["role"] == "admin")
+    if is_profile_owner:
+        user_collections = db.execute(
+            """
+            SELECT c.*,
+                   COUNT(ci.id) AS item_count,
+                   SUM(CASE WHEN i.type = 'movie' THEN 1 ELSE 0 END) AS movie_count,
+                   SUM(CASE WHEN i.type = 'song' THEN 1 ELSE 0 END) AS song_count
+            FROM collections c
+            LEFT JOIN collection_items ci ON c.id = ci.collection_id
+            LEFT JOIN items i ON ci.item_id = i.id
+            WHERE c.user_id = ?
+            GROUP BY c.id
+            ORDER BY c.updated_at DESC
+            """,
+            (user["id"],),
+        ).fetchall()
+    else:
+        user_collections = db.execute(
+            """
+            SELECT c.*,
+                   COUNT(ci.id) AS item_count,
+                   SUM(CASE WHEN i.type = 'movie' THEN 1 ELSE 0 END) AS movie_count,
+                   SUM(CASE WHEN i.type = 'song' THEN 1 ELSE 0 END) AS song_count
+            FROM collections c
+            LEFT JOIN collection_items ci ON c.id = ci.collection_id
+            LEFT JOIN items i ON ci.item_id = i.id
+            WHERE c.user_id = ? AND c.is_public = 1
+            GROUP BY c.id
+            ORDER BY c.updated_at DESC
+            """,
+            (user["id"],),
+        ).fetchall()
+
     return render_template(
         "user_profile.html",
         profile_user=user,
@@ -173,6 +208,7 @@ def profile(username):
         followers_count=followers_count,
         following_count=following_count,
         is_following=is_following,
+        collections=user_collections,
     )
 
 

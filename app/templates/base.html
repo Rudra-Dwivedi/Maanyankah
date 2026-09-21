@@ -26,7 +26,7 @@
       </a>
       <nav class="site-nav">
         <a href="{{ url_for('items.browse') }}">Browse</a>
-        <a href="{{ url_for('agent.index') }}">चित्राङ्ककः</a>
+        <a href="{{ url_for('agent.index') }}">चित्राङ्कः</a>
         <a href="{{ url_for('feed.feed') }}">Feed</a>
         {% if g.user %}
           <a href="{{ url_for('recommend.people') }}">Find people</a>
@@ -108,7 +108,7 @@
   <!-- Dynamic Profile DP & Bio Modal -->
   {% include "_profile_modal.html" %}
 
-  <!-- Global Floating AI Agent: चित्राङ्ककः (Chitrankakah) -->
+  <!-- Global Floating AI Agent: चित्राङ्कः (Chitrankah) -->
   {% include "_floating_agent.html" %}
 </body>
 </html>

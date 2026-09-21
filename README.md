@@ -1,6 +1,6 @@
 # मान्यांकः (Maanyankah)
 
-A social cinema and taste platform that matches people by taste across movies, music, and sports, and helps groups decide what to watch or listen to together using a collaborative filtering recommendation engine and AI agent (चित्राङ्ककः).
+A social cinema and taste platform that matches people by taste across movies, music, and sports, and helps groups decide what to watch or listen to together using a collaborative filtering recommendation engine and AI agent (चित्राङ्कः).
 
 ---
 
@@ -16,7 +16,7 @@ A social cinema and taste platform that matches people by taste across movies, m
   - Supports configurable strategies: **Average** (maximum group satisfaction) and **Least Misery** (minimizes worst-case disappointment).
   - Clean member picker filtered strictly to community members you actively follow.
 
-- **AI Cinema Agent (चित्राङ्ककः)**:
+- **AI Cinema Agent (चित्राङ्कः / Chitrankah)**:
   - Floating and full-screen studio assistant (`/agent/`).
   - Analyzes real community rating distributions ($1★ \to 5★$ curves) and viewer sentiment.
   - Conversational recommendations and film trivia.

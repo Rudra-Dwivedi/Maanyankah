@@ -51,8 +51,8 @@
 
           {% if item['type'] == 'movie' %}
             <div class="item-agent-link-wrap">
-              <a href="{{ url_for('agent.index', q=item['title']) }}" class="btn-ask-agent" onclick="if(window.openChitrankakah){ window.openChitrankakah('{{ item.title|replace('\'', '\\\'') }}'); return false; }" title="चित्राङ्ककः से पूछें (Ask चित्राङ्ककः)">
-                🤖 चित्राङ्ककः
+              <a href="{{ url_for('agent.index', q=item['title']) }}" class="btn-ask-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ item.title|replace('\'', '\\\'') }}'); return false; }" title="चित्राङ्कः से पूछें (Ask चित्राङ्कः)">
+                🤖 चित्राङ्कः
               </a>
             </div>
           {% endif %}

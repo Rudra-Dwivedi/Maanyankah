@@ -172,7 +172,7 @@
 
                 <div class="tagged-item-actions">
                   {% if post.item_type == 'movie' %}
-                    <a href="{{ url_for('agent.index', q=post.item_title) }}" class="btn-ghost btn-xs" onclick="if(window.openChitrankakah){ window.openChitrankakah('{{ post.item_title|replace('\'', '\\\'') }}'); return false; }" title="चित्राङ्ककः से पूछें">🤖 चित्राङ्ककः</a>
+                    <a href="{{ url_for('agent.index', q=post.item_title) }}" class="btn-ghost btn-xs" onclick="if(window.openChitrankah){ window.openChitrankah('{{ post.item_title|replace('\'', '\\\'') }}'); return false; }" title="चित्राङ्कः से पूछें">🤖 चित्राङ्कः</a>
                   {% endif %}
                   <a href="{{ url_for('items.browse') }}" class="btn-ghost btn-xs" title="Rate this item">Rate</a>
                 </div>
@@ -203,15 +203,15 @@
       <!-- Movie Agent Widget Card -->
       <div class="sidebar-widget-card agent-promo-card">
         <div class="promo-header-row" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.8rem;">
-          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्ककः" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent-movies); box-shadow: 0 4px 14px rgba(232, 184, 75, 0.3);">
+          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent-movies); box-shadow: 0 4px 14px rgba(232, 184, 75, 0.3);">
           <div style="flex: 1; min-width: 0;">
             <div class="promo-badge" style="font-size: 0.65rem; padding: 0.15rem 0.45rem;">AI AGENT</div>
-            <img src="{{ url_for('static', filename='img/chitrankakah_logo.png') }}" alt="चित्राङ्ककः" class="promo-brand-logo" style="height: 24px; width: auto; max-width: 100%; object-fit: contain; display: block; margin-top: 0.25rem;">
+            <img src="{{ url_for('static', filename='img/chitrankakah_logo.png') }}" alt="चित्राङ्कः" class="promo-brand-logo" style="height: 24px; width: auto; max-width: 100%; object-fit: contain; display: block; margin-top: 0.25rem;">
           </div>
         </div>
         <p>Get in-depth cinema analysis, explore live community rating distributions on मान्यांकः, and ask for smart recommendations.</p>
-        <button type="button" class="btn btn-small btn-agent-promo" onclick="if(window.openChitrankakah){ window.openChitrankakah(); } else { window.location.href='{{ url_for('agent.index') }}'; }">
-          Ask चित्राङ्ककः
+        <button type="button" class="btn btn-small btn-agent-promo" onclick="if(window.openChitrankah){ window.openChitrankah(); } else { window.location.href='{{ url_for('agent.index') }}'; }">
+          Ask चित्राङ्कः
         </button>
       </div>
 
@@ -231,7 +231,7 @@
                   <span class="trending-count">{{ ti['post_count'] }} {% if ti['post_count'] == 1 %}post{% else %}posts{% endif %}</span>
                 </div>
                 {% if ti['type'] == 'movie' %}
-                  <a href="{{ url_for('agent.index', q=ti['title']) }}" class="btn-ghost btn-xs" onclick="if(window.openChitrankakah){ window.openChitrankakah('{{ ti['title']|replace('\'', '\\\'') }}'); return false; }" title="Ask चित्राङ्ककः">🤖</a>
+                  <a href="{{ url_for('agent.index', q=ti['title']) }}" class="btn-ghost btn-xs" onclick="if(window.openChitrankah){ window.openChitrankah('{{ ti['title']|replace('\'', '\\\'') }}'); return false; }" title="Ask चित्राङ्कः">🤖</a>
                 {% endif %}
               </div>
             {% endfor %}
@@ -245,7 +245,7 @@
         <ul class="tips-list">
           <li>Tag items to connect your review with fellow fans.</li>
           <li>Constructive criticism and deep recommendations are always welcome.</li>
-          <li>Check out <strong>चित्राङ्ककः</strong> (floating at bottom-right) to analyze rating trends!</li>
+          <li>Check out <strong>चित्राङ्कः</strong> (floating at bottom-right) to analyze rating trends!</li>
         </ul>
       </div>
     </aside>

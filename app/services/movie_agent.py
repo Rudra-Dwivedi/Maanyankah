@@ -364,9 +364,9 @@ def ask_movie_agent(query):
     # 4. Fallback / Helpful conversational guidance
     return {
         "type": "general",
-        "title": "चित्राङ्ककः (Chitrankakah) at your service",
+        "title": "चित्राङ्कः (Chitrankah) at your service",
         "message": (
-            f"नमस्ते! I am **चित्राङ्ककः (Chitrankakah)**, your cinema & ratings intelligence agent. "
+            f"नमस्ते! I am **चित्राङ्कः (Chitrankah)**, your cinema & ratings intelligence agent. "
             f"I can tell you everything about movies in our catalog—including director notes, "
             f"synopsis, themes, and **real community ratings & reviews** logged by Maanyankah members!\n\n"
             f"Try asking about a specific film, community rating trends, or ask for a movie recommendation."

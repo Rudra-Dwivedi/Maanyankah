@@ -1,13 +1,13 @@
 {% if request.endpoint != 'agent.index' %}
-<!-- Floating AI Agent: चित्राङ्ककः (Chitrankakah) -->
+<!-- Floating AI Agent: चित्राङ्कः (Chitrankah) -->
 <div id="floating-agent-container" class="floating-agent-container">
   <!-- Floating Launcher Button -->
-  <button type="button" id="floating-agent-trigger" class="floating-agent-trigger" aria-label="Open चित्राङ्ककः AI Movie Assistant" title="Open चित्राङ्ककः (Chitrankakah) AI Assistant">
+  <button type="button" id="floating-agent-trigger" class="floating-agent-trigger" aria-label="Open चित्राङ्कः AI Movie Assistant" title="Open चित्राङ्कः (Chitrankah) AI Assistant">
     <div class="floating-trigger-avatar-wrap">
-      <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्ककः" class="floating-trigger-thumb">
+      <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः" class="floating-trigger-thumb">
       <span class="floating-pulse-badge" title="Online & Ready"></span>
     </div>
-    <span class="floating-trigger-label">चित्राङ्ककः</span>
+    <span class="floating-trigger-label">चित्राङ्कः</span>
   </button>
 
   <!-- Floating Chat Window / Drawer -->
@@ -16,12 +16,12 @@
     <div class="floating-header">
       <div class="floating-header-info">
         <div class="floating-header-avatar">
-          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्ककः" class="agent-character-thumb">
+          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः" class="agent-character-thumb">
         </div>
         <div class="floating-header-text">
           <div class="floating-title-row">
             <h3 id="floating-agent-title" class="floating-agent-title">
-              <img src="{{ url_for('static', filename='img/chitrankakah_logo.png') }}" alt="चित्राङ्ककः" class="floating-brand-logo">
+              <img src="{{ url_for('static', filename='img/chitrankakah_logo.png') }}" alt="चित्राङ्कः" class="floating-brand-logo">
             </h3>
             <span class="floating-agent-badge">AI AGENT</span>
           </div>
@@ -33,7 +33,7 @@
         <a href="{{ url_for('agent.index') }}" class="floating-btn-header-action" title="Open full-screen AI Studio" aria-label="Open full page">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
-        <button type="button" id="floating-agent-close" class="floating-btn-header-action" title="Close चित्राङ्ककः" aria-label="Close">✕</button>
+        <button type="button" id="floating-agent-close" class="floating-btn-header-action" title="Close चित्राङ्कः" aria-label="Close">✕</button>
       </div>
     </div>
 
@@ -51,11 +51,11 @@
       <!-- Default welcome bubble -->
       <div class="floating-bubble bubble-agent" id="floating-welcome-bubble">
         <div class="bubble-avatar">
-          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्ककः" class="agent-character-thumb">
+          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः" class="agent-character-thumb">
         </div>
         <div class="bubble-content">
-          <img src="{{ url_for('static', filename='img/chitrankakah_logo.png') }}" alt="चित्राङ्ककः" class="welcome-bubble-logo">
-          <p class="bubble-greeting"><strong>नमस्ते! I am चित्राङ्ककः (Chitrankakah).</strong></p>
+          <img src="{{ url_for('static', filename='img/chitrankakah_logo.png') }}" alt="चित्राङ्कः" class="welcome-bubble-logo">
+          <p class="bubble-greeting"><strong>नमस्ते! I am चित्राङ्कः (Chitrankah).</strong></p>
           <p class="bubble-text">Your intelligent cinema & ratings guide on <strong>मान्यांकः</strong>. Ask me about any movie, inspect community ratings & review quotes, or get personalized recommendations!</p>
           <div class="bubble-actions">
             <button type="button" class="floating-bubble-chip" data-query="Highest rated movies on Maanyankah">⭐ View Top Ranked Movies</button>
@@ -67,7 +67,7 @@
     <!-- Footer Input Bar -->
     <form id="floating-agent-form" class="floating-form">
       <div class="floating-input-wrap">
-        <input type="text" id="floating-agent-input" class="floating-input" placeholder="Ask चित्राङ्ककः about movies, ratings..." autocomplete="off" required>
+        <input type="text" id="floating-agent-input" class="floating-input" placeholder="Ask चित्राङ्कः about movies, ratings..." autocomplete="off" required>
       </div>
       <button type="submit" id="floating-send-btn" class="floating-send-btn" title="Send question" aria-label="Send">
         <span class="send-icon">➤</span>
@@ -139,10 +139,10 @@
       if (stream) {
         stream.innerHTML = `
           <div class="floating-bubble bubble-agent" id="floating-welcome-bubble">
-            <div class="bubble-avatar"><img src="/static/img/chitrankakah_avatar.png" alt="चित्राङ्ककः" class="agent-character-thumb"></div>
+            <div class="bubble-avatar"><img src="/static/img/chitrankakah_avatar.png" alt="चित्राङ्कः" class="agent-character-thumb"></div>
             <div class="bubble-content">
-              <img src="/static/img/chitrankakah_logo.png" alt="चित्राङ्ककः" class="welcome-bubble-logo">
-              <p class="bubble-greeting"><strong>नमस्ते! I am चित्राङ्ककः (Chitrankakah).</strong></p>
+              <img src="/static/img/chitrankakah_logo.png" alt="चित्राङ्कः" class="welcome-bubble-logo">
+              <p class="bubble-greeting"><strong>नमस्ते! I am चित्राङ्कः (Chitrankah).</strong></p>
               <p class="bubble-text">Your intelligent cinema & ratings guide on <strong>मान्यांकः</strong>. Ask me about any movie, inspect community ratings & review quotes, or get personalized recommendations!</p>
               <div class="bubble-actions">
                 <button type="button" class="floating-bubble-chip" data-query="Highest rated movies on Maanyankah">⭐ View Top Ranked Movies</button>
@@ -165,8 +165,8 @@
     }
   });
 
-  // Global helper for opening Chitrankakah from any movie card / link
-  window.openChitrankakah = function(query) {
+  // Global helper for opening Chitrankah from any movie card / link
+  window.openChitrankah = window.openChitrankakah = function(query) {
     openWindow();
     if (query && typeof query === 'string') {
       const q = query.trim();
@@ -194,12 +194,12 @@
     bubble.className = 'floating-bubble bubble-agent bubble-loading';
     bubble.id = 'floating-loading-bubble';
     bubble.innerHTML = `
-      <div class="bubble-avatar"><img src="/static/img/chitrankakah_avatar.png" alt="चित्राङ्ककः" class="agent-character-thumb"></div>
+      <div class="bubble-avatar"><img src="/static/img/chitrankakah_avatar.png" alt="चित्राङ्कः" class="agent-character-thumb"></div>
       <div class="bubble-content">
         <div class="agent-typing-indicator">
           <span></span><span></span><span></span>
         </div>
-        <small class="typing-note">चित्राङ्ककः is analyzing ratings...</small>
+        <small class="typing-note">चित्राङ्कः is analyzing ratings...</small>
       </div>
     `;
     stream.appendChild(bubble);
@@ -316,7 +316,7 @@
     } else {
       bodyHtml = `
         <div class="float-general-card">
-          <h4 class="float-general-title">${escapeHtml(data.title || 'चित्राङ्ककः')}</h4>
+          <h4 class="float-general-title">${escapeHtml(data.title || 'चित्राङ्कः')}</h4>
           <p class="float-general-msg">${escapeHtml(data.message)}</p>
         </div>
       `;
@@ -336,7 +336,7 @@
     const bubble = document.createElement('div');
     bubble.className = 'floating-bubble bubble-agent';
     bubble.innerHTML = `
-      <div class="bubble-avatar"><img src="/static/img/chitrankakah_avatar.png" alt="चित्राङ्ककः" class="agent-character-thumb"></div>
+      <div class="bubble-avatar"><img src="/static/img/chitrankakah_avatar.png" alt="चित्राङ्कः" class="agent-character-thumb"></div>
       <div class="bubble-content">
         ${bodyHtml}
         ${suggestionsHtml}
@@ -393,7 +393,7 @@
       errorBubble.innerHTML = `
         <div class="bubble-avatar">⚠️</div>
         <div class="bubble-content">
-          <p class="text-danger">Could not reach चित्राङ्ककः: ${escapeHtml(err.message)}</p>
+          <p class="text-danger">Could not reach चित्राङ्कः: ${escapeHtml(err.message)}</p>
         </div>
       `;
       stream.appendChild(errorBubble);

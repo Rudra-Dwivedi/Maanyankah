@@ -8,8 +8,8 @@
     <p class="page-sub">Rate a few things in each category — the more you rate, the sharper your matches and group picks get.</p>
   </div>
 
-  <!-- Dynamic Latest Movies Flash Spotlight Section -->
-  {% if latest_movies and latest_movies|length > 0 %}
+  <!-- Dynamic Latest Movies Flash Spotlight Section (Shown on default browse) -->
+  {% if not has_active_filters and latest_movies and latest_movies|length > 0 %}
     <section class="flash-spotlight-banner" id="flash-spotlight" aria-label="Latest Movies Spotlight">
       <div class="flash-top-nav-bar">
         <div class="flash-badge-group">
@@ -101,22 +101,143 @@
   {% endif %}
 
 
-  <div class="filters">
-    <a href="{{ url_for('items.browse') }}" class="{{ 'active' if not active_type }}">All</a>
-    <a href="{{ url_for('items.browse', type='movie') }}" class="{{ 'active' if active_type == 'movie' }}">Movies</a>
-    <a href="{{ url_for('items.browse', type='song') }}" class="{{ 'active' if active_type == 'song' }}">Music</a>
-    <a href="{{ url_for('items.browse', type='team') }}" class="{{ 'active' if active_type == 'team' }}">Sports</a>
+  <!-- Search & Multi-Faceted Filter Console -->
+  <form method="get" action="{{ url_for('items.browse') }}" class="search-filter-panel" id="catalog-search-form">
+    {% if active_type %}
+      <input type="hidden" name="type" value="{{ active_type }}">
+    {% endif %}
+
+    <!-- Top Row: Search Input -->
+    <div class="search-bar-row">
+      <div class="search-input-wrapper">
+        <span class="search-input-icon">🔍</span>
+        <input type="text"
+               name="q"
+               id="catalog-search-input"
+               class="search-input-field"
+               value="{{ search_query }}"
+               placeholder="{% if active_type == 'movie' %}Search movies by title, actors, overview, or keywords...{% elif active_type == 'song' %}Search music by song title, artist, or album...{% elif active_type == 'team' %}Search teams by name, league, or sport...{% else %}Search movies, music, and sports by title, genre, keyword...{% endif %}"
+               autocomplete="off">
+        {% if search_query %}
+          <button type="button" class="search-clear-btn" id="btn-clear-search-text" title="Clear search text">✕</button>
+        {% endif %}
+      </div>
+      <button type="submit" class="btn-search-submit">
+        <span>Search</span>
+      </button>
+    </div>
+
+    <!-- Category Tabs -->
+    <div class="filters" style="margin: 0; padding: 0;">
+      <a href="{{ url_for('items.browse', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) if (search_query or active_genre or min_rating or active_era or active_sort != 'newest') else url_for('items.browse') }}" class="{{ 'active' if not active_type }}">All</a>
+      <a href="{{ url_for('items.browse', type='movie', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'movie' }}">Movies 🎬</a>
+      <a href="{{ url_for('items.browse', type='song', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'song' }}">Music 🎵</a>
+      <a href="{{ url_for('items.browse', type='team', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'team' }}">Sports 🏆</a>
+    </div>
+
+    <!-- Filter Dropdowns Row -->
+    <div class="filter-controls-row">
+      <!-- Genre Dropdown -->
+      <div class="filter-select-group">
+        <label for="filter-genre" class="filter-select-label">Genre</label>
+        <select name="genre" id="filter-genre" class="filter-dropdown" onchange="this.form.submit()">
+          <option value="">All Genres</option>
+          {% for g in available_genres %}
+            <option value="{{ g.tag }}" {{ 'selected' if active_genre == g.tag }}>{{ g.label }} ({{ g.count }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Min Community Rating Dropdown -->
+      <div class="filter-select-group">
+        <label for="filter-min-rating" class="filter-select-label">Community Rating</label>
+        <select name="min_rating" id="filter-min-rating" class="filter-dropdown" onchange="this.form.submit()">
+          <option value="" {{ 'selected' if not min_rating }}>★ All Ratings</option>
+          <option value="4" {{ 'selected' if min_rating == '4' }}>★ 4.0 & above (Top Rated)</option>
+          <option value="3" {{ 'selected' if min_rating == '3' }}>★ 3.0 & above</option>
+          <option value="2" {{ 'selected' if min_rating == '2' }}>★ 2.0 & above</option>
+          <option value="unrated" {{ 'selected' if min_rating == 'unrated' }}>Unrated / Be First</option>
+        </select>
+      </div>
+
+      <!-- Release Era Dropdown (Especially useful for movies) -->
+      <div class="filter-select-group">
+        <label for="filter-era" class="filter-select-label">Release Era</label>
+        <select name="era" id="filter-era" class="filter-dropdown" onchange="this.form.submit()">
+          <option value="" {{ 'selected' if not active_era }}>All Eras / Years</option>
+          <option value="2020s" {{ 'selected' if active_era == '2020s' }}>2020s & 2026 (Modern)</option>
+          <option value="2010s" {{ 'selected' if active_era == '2010s' }}>2010s</option>
+          <option value="2000s" {{ 'selected' if active_era == '2000s' }}>2000s</option>
+          <option value="classic" {{ 'selected' if active_era in ('classic', 'older') }}>1990s & Older (Classics)</option>
+        </select>
+      </div>
+
+      <!-- Sort Order Dropdown -->
+      <div class="filter-select-group">
+        <label for="filter-sort" class="filter-select-label">Sort Order</label>
+        <select name="sort" id="filter-sort" class="filter-dropdown" onchange="this.form.submit()">
+          <option value="newest" {{ 'selected' if active_sort == 'newest' }}>Recently Added</option>
+          <option value="highest_rated" {{ 'selected' if active_sort == 'highest_rated' }}>Highest Rated (★)</option>
+          <option value="most_reviewed" {{ 'selected' if active_sort == 'most_reviewed' }}>Most Discussed</option>
+          <option value="title_asc" {{ 'selected' if active_sort == 'title_asc' }}>Title (A → Z)</option>
+          <option value="title_desc" {{ 'selected' if active_sort == 'title_desc' }}>Title (Z → A)</option>
+          <option value="release_date" {{ 'selected' if active_sort == 'release_date' }}>Release Date</option>
+        </select>
+      </div>
+
+      {% if has_active_filters %}
+        <div style="margin-left: auto; align-self: flex-end; padding-bottom: 2px;">
+          <a href="{{ url_for('items.browse', type=active_type) }}" class="btn-clear-all-filters" title="Reset all search queries and filters">
+            ↺ Reset Filters
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Active Filter Badges / Dismissible Chips -->
+    {% if active_chips and active_chips|length > 0 %}
+      <div class="active-chips-tray">
+        <span class="active-chips-label">Active Filters:</span>
+        {% for chip in active_chips %}
+          {% set chip_type = active_type if chip.key != 'type' else None %}
+          {% set chip_q = search_query if chip.key != 'q' else None %}
+          {% set chip_genre = active_genre if chip.key != 'genre' else None %}
+          {% set chip_min_rating = min_rating if chip.key != 'min_rating' else None %}
+          {% set chip_era = active_era if chip.key != 'era' else None %}
+          {% set chip_sort = active_sort if chip.key != 'sort' else 'newest' %}
+          <a href="{{ url_for('items.browse', type=chip_type, q=chip_q, genre=chip_genre, min_rating=chip_min_rating, era=chip_era, sort=chip_sort) }}"
+             class="filter-chip"
+             title="Remove {{ chip.label }}">
+            <span>{{ chip.label }}</span>
+            <span class="filter-chip-remove" aria-hidden="true">✕</span>
+          </a>
+        {% endfor %}
+        <a href="{{ url_for('items.browse', type=active_type) }}" class="btn-clear-all-filters">Clear All</a>
+      </div>
+    {% endif %}
+  </form>
+
+  <!-- Results Summary Meta Bar -->
+  <div class="search-results-meta">
+    <span>
+      Showing <strong class="search-results-count">{{ total_count }}</strong>
+      {{ active_type or 'catalog' }} {{ 'item' if total_count == 1 else 'items' }}
+      {% if search_query %}matching "<strong>{{ search_query }}</strong>"{% endif %}
+    </span>
+    {% if has_active_filters %}
+      <a href="{{ url_for('items.browse', type=active_type) }}" style="color: var(--accent-movies); text-decoration: none; font-size: 0.78rem;">Clear filters</a>
+    {% endif %}
   </div>
 
-  <!-- Genre Filter Pill Bar -->
+  <!-- Genre Filter Pill Bar for quick tapping -->
   {% if available_genres and available_genres|length > 0 %}
     <div class="genre-filter-container">
       <div class="genre-filter-scroll">
-        <a href="{{ url_for('items.browse', type=active_type) }}" class="genre-pill {{ 'active' if not active_genre }}">
+        <a href="{{ url_for('items.browse', type=active_type, q=search_query, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="genre-pill {{ 'active' if not active_genre }}">
           All Genres
         </a>
         {% for g in available_genres %}
-          <a href="{{ url_for('items.browse', type=active_type, genre=g.tag) }}" class="genre-pill {{ 'active' if active_genre == g.tag }}">
+          <a href="{{ url_for('items.browse', type=active_type, genre=g.tag, q=search_query, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="genre-pill {{ 'active' if active_genre == g.tag }}">
             {{ g.label }}
             <span class="genre-pill-count">{{ g.count }}</span>
           </a>
@@ -125,21 +246,17 @@
     </div>
   {% endif %}
 
-  <!-- Active Filter Notification / Reset Bar -->
-  {% if active_genre %}
-    <div class="active-filter-bar">
-      <span>Filtering by genre: <strong>{{ active_genre|title }}</strong> ({{ items|length }} {{ 'item' if items|length == 1 else 'items' }})</span>
-      <a href="{{ url_for('items.browse', type=active_type) }}" class="btn-clear-genre" title="Remove genre filter">✕ Clear genre filter</a>
-    </div>
-  {% endif %}
-
   {% if items|length == 0 %}
     <div class="empty-state">
-      <p>No items found{% if active_genre %} for genre "{{ active_genre|title }}"{% endif %}.</p>
-      {% if active_genre %}
-        <p><a href="{{ url_for('items.browse', type=active_type) }}" class="btn btn-small">Show all {{ active_type or 'items' }}</a></p>
+      <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🔍</div>
+      <p>No {% if active_type %}{{ active_type }}s{% else %}items{% endif %} found{% if search_query %} matching "<strong>{{ search_query }}</strong>"{% endif %}{% if active_genre %} in genre "<strong>{{ active_genre|title }}</strong>"{% endif %}.</p>
+      {% if has_active_filters %}
+        <p style="margin-top: 0.8rem;">
+          <a href="{{ url_for('items.browse', type=active_type) }}" class="btn btn-small">Clear all filters</a>
+          <a href="{{ url_for('items.browse') }}" class="btn-ghost btn-small" style="margin-left: 0.4rem;">Browse all items</a>
+        </p>
       {% else %}
-        <p class="empty-sub">Load some via the TMDB/Spotify/sports clients in <code>app/services/</code>, or insert a few rows manually to test with.</p>
+        <p class="empty-sub">Load some real data via Settings, or test with your seeded catalog items.</p>
       {% endif %}
     </div>
   {% endif %}
@@ -688,6 +805,16 @@
         }
       });
     }
+  // Clear search input button handler
+  var clearBtn = document.getElementById('btn-clear-search-text');
+  var searchInput = document.getElementById('catalog-search-input');
+  if (clearBtn && searchInput) {
+    clearBtn.addEventListener('click', function() {
+      searchInput.value = '';
+      if (searchInput.form) {
+        searchInput.form.submit();
+      }
+    });
   }
 
   function escapeHtml(text) {

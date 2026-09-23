@@ -86,24 +86,26 @@ def get_item_metadata_and_description(item):
 
 @bp.route("/")
 def browse():
-    """Browse items, optionally filtered by type (movie | song | team) and genre."""
+    """Browse items, with keyword search and multi-faceted filtering (type, genre, rating, era, sorting)."""
     item_type = request.args.get("type", "").strip().lower()
     if item_type not in ("movie", "song", "team"):
         item_type = None
 
+    search_query = request.args.get("q", "").strip()
     active_genre = request.args.get("genre", "").strip().lower()
+    min_rating = request.args.get("min_rating", "").strip().lower()
+    active_sort = request.args.get("sort", "newest").strip().lower()
+    active_era = request.args.get("era", "").strip().lower()
+
     db = get_db()
 
     # Query distinct genre tags for the active type filter
+    tag_sql = "SELECT genre_tags FROM items WHERE genre_tags IS NOT NULL AND genre_tags != ''"
+    tag_params = []
     if item_type:
-        tag_rows = db.execute(
-            "SELECT genre_tags FROM items WHERE type = ? AND genre_tags IS NOT NULL AND genre_tags != ''",
-            (item_type,),
-        ).fetchall()
-    else:
-        tag_rows = db.execute(
-            "SELECT genre_tags FROM items WHERE genre_tags IS NOT NULL AND genre_tags != ''"
-        ).fetchall()
+        tag_sql += " AND type = ?"
+        tag_params.append(item_type)
+    tag_rows = db.execute(tag_sql, tag_params).fetchall()
 
     genre_counts = {}
     for r in tag_rows:
@@ -117,7 +119,7 @@ def browse():
         for t in sorted(genre_counts.keys())
     ]
 
-    # Build SQL query with optional type and genre filtering
+    # Build SQL query with optional type, genre, search, and era filtering
     where_clauses = []
     params = []
 
@@ -129,8 +131,60 @@ def browse():
         where_clauses.append("(',' || LOWER(REPLACE(i.genre_tags, ' ', '')) || ',') LIKE ?")
         params.append(f"%,{active_genre.replace(' ', '')},%")
 
+    if search_query:
+        q_clean = search_query.lower()
+        where_clauses.append("(LOWER(i.title) LIKE ? OR LOWER(i.genre_tags) LIKE ? OR LOWER(i.metadata) LIKE ?)")
+        params.extend([f"%{q_clean}%", f"%{q_clean}%", f"%{q_clean}%"])
+
+    if active_era:
+        if active_era == "2020s":
+            where_clauses.append("(i.metadata LIKE '%\"release_date\": \"202%' OR i.metadata LIKE '%\"release_date\":\"202%')")
+        elif active_era == "2010s":
+            where_clauses.append("(i.metadata LIKE '%\"release_date\": \"201%' OR i.metadata LIKE '%\"release_date\":\"201%')")
+        elif active_era == "2000s":
+            where_clauses.append("(i.metadata LIKE '%\"release_date\": \"200%' OR i.metadata LIKE '%\"release_date\":\"200%')")
+        elif active_era in ("classic", "older"):
+            where_clauses.append("(i.metadata LIKE '%\"release_date\": \"19%' OR i.metadata LIKE '%\"release_date\":\"19%')")
+
     where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
-    order_sql = "ORDER BY i.title" if item_type else "ORDER BY i.type, i.title"
+
+    # Build HAVING clause for community rating threshold
+    having_clauses = []
+    if min_rating:
+        if min_rating in ("4", "4.0", "4+"):
+            having_clauses.append("COALESCE(ROUND(AVG(p.rating), 1), 0) >= 4.0 AND COUNT(p.rating) > 0")
+        elif min_rating in ("3", "3.0", "3+"):
+            having_clauses.append("COALESCE(ROUND(AVG(p.rating), 1), 0) >= 3.0 AND COUNT(p.rating) > 0")
+        elif min_rating in ("2", "2.0", "2+"):
+            having_clauses.append("COALESCE(ROUND(AVG(p.rating), 1), 0) >= 2.0 AND COUNT(p.rating) > 0")
+        elif min_rating == "unrated":
+            having_clauses.append("COUNT(p.rating) = 0")
+
+    having_sql = ("HAVING " + " AND ".join(having_clauses)) if having_clauses else ""
+
+    # Sorting order logic
+    sort_labels = {
+        "newest": "Recently Added",
+        "highest_rated": "Highest Rated (★)",
+        "most_reviewed": "Most Discussed",
+        "title_asc": "Title (A → Z)",
+        "title_desc": "Title (Z → A)",
+        "release_date": "Release Date",
+    }
+
+    if active_sort == "highest_rated":
+        order_sql = "ORDER BY avg_rating DESC, rating_count DESC, i.id DESC"
+    elif active_sort == "most_reviewed":
+        order_sql = "ORDER BY rating_count DESC, avg_rating DESC, i.id DESC"
+    elif active_sort == "title_asc":
+        order_sql = "ORDER BY LOWER(TRIM(i.title)) ASC"
+    elif active_sort == "title_desc":
+        order_sql = "ORDER BY LOWER(TRIM(i.title)) DESC"
+    elif active_sort == "release_date":
+        order_sql = "ORDER BY json_extract(i.metadata, '$.release_date') DESC, i.id DESC"
+    else:
+        active_sort = "newest"
+        order_sql = "ORDER BY i.id DESC"
 
     sql = f"""
         SELECT i.*,
@@ -140,6 +194,7 @@ def browse():
         LEFT JOIN user_preferences p ON i.id = p.item_id
         {where_sql}
         GROUP BY i.id
+        {having_sql}
         {order_sql}
     """
     items = db.execute(sql, params).fetchall()
@@ -167,7 +222,7 @@ def browse():
             (g.user["id"],),
         ).fetchall()
 
-    # Query latest movies for the dynamic flash spotlight section
+    # Query latest movies for the dynamic flash spotlight section (only on default/unfiltered view or movie tab)
     latest_movie_rows = db.execute(
         """
         SELECT i.*,
@@ -193,16 +248,42 @@ def browse():
 
     new_movie = latest_movies[0] if latest_movies else None
 
+    # Construct active filter summary chips
+    active_chips = []
+    if search_query:
+        active_chips.append({"key": "q", "label": f'Keyword: "{search_query}"'})
+    if item_type:
+        active_chips.append({"key": "type", "label": f"Type: {item_type.title()}"})
+    if active_genre:
+        active_chips.append({"key": "genre", "label": f"Genre: {active_genre.title()}"})
+    if min_rating:
+        r_lbl = "Unrated" if min_rating == "unrated" else f"★ {min_rating}+"
+        active_chips.append({"key": "min_rating", "label": f"Rating: {r_lbl}"})
+    if active_era:
+        active_chips.append({"key": "era", "label": f"Era: {active_era.upper()}"})
+    if active_sort and active_sort != "newest":
+        active_chips.append({"key": "sort", "label": f"Sort: {sort_labels.get(active_sort, active_sort)}"})
+
+    has_active_filters = bool(search_query or active_genre or min_rating or active_era or (active_sort != "newest"))
+
     return render_template(
         "items.html",
         items=processed_items,
         active_type=item_type,
+        search_query=search_query,
         active_genre=active_genre,
+        min_rating=min_rating,
+        active_sort=active_sort,
+        active_era=active_era,
+        sort_labels=sort_labels,
         available_genres=available_genres,
         user_ratings=user_ratings,
         user_collections=user_collections,
         new_movie=new_movie,
         latest_movies=latest_movies,
+        active_chips=active_chips,
+        has_active_filters=has_active_filters,
+        total_count=len(processed_items),
     )
 
 

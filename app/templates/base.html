@@ -38,6 +38,11 @@
         {% endif %}
       </nav>
       <div class="site-header-auth">
+        <form method="get" action="{{ url_for('items.browse') }}" class="nav-search-form" title="Quick search movies and catalog">
+          <span class="nav-search-icon">🔍</span>
+          <input type="text" name="q" class="nav-search-input" placeholder="Search movies..." autocomplete="off">
+        </form>
+
         <button type="button" id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Day / Night mode" title="Toggle Day / Night mode">
           <span class="theme-toggle-icon">🌙</span>
           <span class="theme-toggle-text">Night</span>

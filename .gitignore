@@ -61,3 +61,7 @@ desktop.ini
 *.log
 scratch/
 
+# Local interview guide documents
+*.pdf
+Maanyankah_Project_and_Interview_Guide.html
+

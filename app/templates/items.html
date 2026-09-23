@@ -8,67 +8,93 @@
     <p class="page-sub">Rate a few things in each category — the more you rate, the sharper your matches and group picks get.</p>
   </div>
 
-  <!-- Newly Added Movie Flash Spotlight Section -->
-  {% if new_movie %}
-    <section class="flash-spotlight-banner" id="flash-spotlight" aria-label="Newly Added Movie Spotlight">
-      <div class="flash-banner-inner">
-        <div class="flash-badge-col">
+  <!-- Dynamic Latest Movies Flash Spotlight Section -->
+  {% if latest_movies and latest_movies|length > 0 %}
+    <section class="flash-spotlight-banner" id="flash-spotlight" aria-label="Latest Movies Spotlight">
+      <div class="flash-top-nav-bar">
+        <div class="flash-badge-group">
           <span class="flash-pulse-badge">
             <span class="flash-pulse-dot"></span>
-            <span class="flash-badge-text">⚡ JUST ADDED TO CATALOG</span>
+            <span class="flash-badge-text">⚡ LATEST MOVIES</span>
           </span>
         </div>
 
-        <div class="flash-content-main">
-          <div class="flash-poster-thumb">
-            {% if new_movie.image_url %}
-              <img src="{{ new_movie.image_url }}" alt="{{ new_movie.title }}" loading="lazy">
-            {% else %}
-              <div class="flash-poster-placeholder">🎬</div>
-            {% endif %}
-          </div>
-
-          <div class="flash-details">
-            <div class="flash-meta-top">
-              <span class="flash-item-type">MOVIE</span>
-              {% if new_movie.parsed_genres %}
-                <div class="flash-genre-tags">
-                  {% for tag in new_movie.parsed_genres %}
-                    <a href="{{ url_for('items.browse', type='movie', genre=tag) }}" class="flash-genre-tag">#{{ tag }}</a>
-                  {% endfor %}
-                </div>
-              {% endif %}
+        <div class="flash-controls-group">
+          {% if latest_movies|length > 1 %}
+            <div class="flash-stepper-controls">
+              <button type="button" class="btn-flash-swap" id="flash-prev-btn" title="Previous latest movie" aria-label="Previous movie">‹</button>
+              <span class="flash-swap-counter" id="flash-swap-counter"><strong id="flash-current-idx">1</strong> / {{ latest_movies|length }}</span>
+              <button type="button" class="btn-flash-swap" id="flash-next-btn" title="Next latest movie" aria-label="Next movie">›</button>
             </div>
-
-            <h2 class="flash-item-title">{{ new_movie.title }}</h2>
-
-            <div class="flash-item-stats">
-              {% if new_movie.rating_count > 0 %}
-                <span class="star-gold">★</span>
-                <strong class="flash-score-num">{{ new_movie.avg_rating }}</strong>
-                <span class="flash-score-scale">/ 5</span>
-                <span class="flash-count">({{ new_movie.rating_count }} {{ 'rating' if new_movie.rating_count == 1 else 'ratings' }})</span>
-              {% else %}
-                <span class="flash-first-rater">🌟 Be the first to rate this film!</span>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-
-        <div class="flash-actions-col">
-          <a href="{{ url_for('agent.index', q=new_movie.title) }}" class="btn-flash-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ new_movie.title|replace('\'', '\\\'') }}'); return false; }" title="Ask चित्राङ्कः about this movie">
-            🤖 Ask चित्राङ्कः
-          </a>
-          {% if g.user %}
-            <button type="button" class="btn-flash-collection btn-item-collection-quick" data-item-id="{{ new_movie.id }}" data-item-title="{{ new_movie.title }}" data-item-type="{{ new_movie.type }}" title="Add to collection">
-              📁 + Collection
-            </button>
           {% endif %}
           <button type="button" class="btn-flash-close" id="flash-dismiss-btn" title="Dismiss spotlight" aria-label="Dismiss banner">✕</button>
         </div>
       </div>
+
+      <div class="flash-slides-wrapper" id="flash-slides-wrapper">
+        {% for m in latest_movies %}
+          <div class="flash-slide-item {{ 'active' if loop.first }}" data-slide-index="{{ loop.index0 }}" style="{{ 'display: flex;' if loop.first else 'display: none;' }}">
+            <div class="flash-content-main">
+              <div class="flash-poster-thumb">
+                {% if m.image_url %}
+                  <img src="{{ m.image_url }}" alt="{{ m.title }}" loading="lazy">
+                {% else %}
+                  <div class="flash-poster-placeholder">🎬</div>
+                {% endif %}
+              </div>
+
+              <div class="flash-details">
+                <div class="flash-meta-top">
+                  <span class="flash-item-type">MOVIE</span>
+                  {% if m.parsed_genres %}
+                    <div class="flash-genre-tags">
+                      {% for tag in m.parsed_genres %}
+                        <a href="{{ url_for('items.browse', type='movie', genre=tag) }}" class="flash-genre-tag">#{{ tag }}</a>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+
+                <h2 class="flash-item-title">{{ m.title }}</h2>
+
+                <div class="flash-item-stats">
+                  {% if m.rating_count > 0 %}
+                    <span class="star-gold">★</span>
+                    <strong class="flash-score-num">{{ m.avg_rating }}</strong>
+                    <span class="flash-score-scale">/ 5</span>
+                    <span class="flash-count">({{ m.rating_count }} {{ 'rating' if m.rating_count == 1 else 'ratings' }})</span>
+                  {% else %}
+                    <span class="flash-first-rater">🌟 Be the first to rate this film!</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="flash-actions-col">
+              <a href="{{ url_for('agent.index', q=m.title) }}" class="btn-flash-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ m.title|replace('\'', '\\\'') }}'); return false; }" title="Ask चित्राङ्कः about this movie">
+                🤖 Ask चित्राङ्कः
+              </a>
+              {% if g.user %}
+                <button type="button" class="btn-flash-collection btn-item-collection-quick" data-item-id="{{ m.id }}" data-item-title="{{ m.title }}" data-item-type="{{ m.type }}" title="Add to collection">
+                  📁 + Collection
+                </button>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Mini Dots Navigation -->
+      {% if latest_movies|length > 1 %}
+        <div class="flash-dots-indicator" id="flash-dots-indicator">
+          {% for m in latest_movies %}
+            <button type="button" class="flash-dot {{ 'active' if loop.first }}" data-target-index="{{ loop.index0 }}" title="Show {{ m.title }}" aria-label="Slide {{ loop.index }}"></button>
+          {% endfor %}
+        </div>
+      {% endif %}
     </section>
   {% endif %}
+
 
   <div class="filters">
     <a href="{{ url_for('items.browse') }}" class="{{ 'active' if not active_type }}">All</a>
@@ -193,8 +219,10 @@
 <script>
   (function() {
     var banner = document.getElementById('flash-spotlight');
+    if (!banner) return;
+
     var dismissBtn = document.getElementById('flash-dismiss-btn');
-    if (banner && dismissBtn) {
+    if (dismissBtn) {
       // Check session storage
       try {
         if (sessionStorage.getItem('dismissed_flash_spotlight') === 'true') {
@@ -215,6 +243,131 @@
         }, 260);
       });
     }
+
+    // Dynamic Movie Swapping Logic
+    var slides = Array.from(banner.querySelectorAll('.flash-slide-item'));
+    var dots = Array.from(banner.querySelectorAll('.flash-dot'));
+    var prevBtn = document.getElementById('flash-prev-btn');
+    var nextBtn = document.getElementById('flash-next-btn');
+    var counterIdx = document.getElementById('flash-current-idx');
+    var currentIndex = 0;
+    var totalSlides = slides.length;
+    var autoPlayTimer = null;
+
+    if (totalSlides <= 1) return;
+
+    function goToSlide(targetIndex, direction) {
+      if (targetIndex < 0) {
+        targetIndex = totalSlides - 1;
+      } else if (targetIndex >= totalSlides) {
+        targetIndex = 0;
+      }
+
+      if (targetIndex === currentIndex) return;
+
+      var currentSlide = slides[currentIndex];
+      var nextSlide = slides[targetIndex];
+
+      // Prepare next slide
+      nextSlide.style.opacity = '0';
+      nextSlide.style.transform = direction === 'left' ? 'translateX(24px)' : 'translateX(-24px)';
+      nextSlide.style.display = 'flex';
+
+      // Animate current slide out
+      currentSlide.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+      currentSlide.style.opacity = '0';
+      currentSlide.style.transform = direction === 'left' ? 'translateX(-24px)' : 'translateX(24px)';
+
+      setTimeout(function() {
+        currentSlide.style.display = 'none';
+        currentSlide.classList.remove('active');
+
+        // Animate next slide in
+        nextSlide.classList.add('active');
+        nextSlide.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+        requestAnimationFrame(function() {
+          nextSlide.style.opacity = '1';
+          nextSlide.style.transform = 'translateX(0)';
+        });
+      }, 200);
+
+      // Update counter and dots
+      currentIndex = targetIndex;
+      if (counterIdx) {
+        counterIdx.textContent = currentIndex + 1;
+      }
+      dots.forEach(function(dot, idx) {
+        dot.classList.toggle('active', idx === currentIndex);
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        goToSlide(currentIndex - 1, 'right');
+        resetTimer();
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        goToSlide(currentIndex + 1, 'left');
+        resetTimer();
+      });
+    }
+
+    dots.forEach(function(dot) {
+      dot.addEventListener('click', function(e) {
+        e.preventDefault();
+        var target = parseInt(this.getAttribute('data-target-index'), 10);
+        goToSlide(target, target > currentIndex ? 'left' : 'right');
+        resetTimer();
+      });
+    });
+
+    // Touch Swipe Support for Mobile
+    var touchStartX = 0;
+    var touchEndX = 0;
+    banner.addEventListener('touchstart', function(e) {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    banner.addEventListener('touchend', function(e) {
+      touchEndX = e.changedTouches[0].screenX;
+      if (touchStartX - touchEndX > 45) {
+        // Swiped Left -> Show next
+        goToSlide(currentIndex + 1, 'left');
+        resetTimer();
+      } else if (touchEndX - touchStartX > 45) {
+        // Swiped Right -> Show prev
+        goToSlide(currentIndex - 1, 'right');
+        resetTimer();
+      }
+    }, { passive: true });
+
+    // Auto-advance with hover pause
+    function startTimer() {
+      autoPlayTimer = setInterval(function() {
+        goToSlide(currentIndex + 1, 'left');
+      }, 5500);
+    }
+
+    function stopTimer() {
+      if (autoPlayTimer) {
+        clearInterval(autoPlayTimer);
+        autoPlayTimer = null;
+      }
+    }
+
+    function resetTimer() {
+      stopTimer();
+      startTimer();
+    }
+
+    banner.addEventListener('mouseenter', stopTimer);
+    banner.addEventListener('mouseleave', startTimer);
+    startTimer();
   })();
 </script>
 {% endblock %}

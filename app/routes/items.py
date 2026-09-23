@@ -90,8 +90,8 @@ def browse():
             (g.user["id"],),
         ).fetchall()
 
-    # Query newly added movie for the flash spotlight section
-    new_movie_row = db.execute(
+    # Query latest movies for the dynamic flash spotlight section
+    latest_movie_rows = db.execute(
         """
         SELECT i.*,
                COALESCE(ROUND(AVG(p.rating), 1), 0) AS avg_rating,
@@ -101,16 +101,20 @@ def browse():
         WHERE i.type = 'movie'
         GROUP BY i.id
         ORDER BY i.id DESC
-        LIMIT 1
+        LIMIT 6
         """
-    ).fetchone()
+    ).fetchall()
 
-    new_movie = None
-    if new_movie_row:
-        m_dict = dict(with_image_urls([new_movie_row])[0])
-        raw_tags = m_dict.get("genre_tags") or ""
-        m_dict["parsed_genres"] = [t.strip() for t in raw_tags.split(",") if t.strip()]
-        new_movie = m_dict
+    latest_movies = []
+    if latest_movie_rows:
+        processed_latest = with_image_urls(latest_movie_rows)
+        for row in processed_latest:
+            m_dict = dict(row)
+            raw_tags = m_dict.get("genre_tags") or ""
+            m_dict["parsed_genres"] = [t.strip() for t in raw_tags.split(",") if t.strip()]
+            latest_movies.append(m_dict)
+
+    new_movie = latest_movies[0] if latest_movies else None
 
     return render_template(
         "items.html",
@@ -121,7 +125,9 @@ def browse():
         user_ratings=user_ratings,
         user_collections=user_collections,
         new_movie=new_movie,
+        latest_movies=latest_movies,
     )
+
 
 
 

@@ -6141,6 +6141,130 @@ p { color: var(--text-muted); margin: 0 0 1em; }
   background: linear-gradient(90deg, #e8b84b, #f5c518, transparent);
 }
 
+.flash-top-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .flash-top-nav-bar {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.flash-badge-group {
+  display: flex;
+  align-items: center;
+}
+
+.flash-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.flash-stepper-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  padding: 0.15rem 0.5rem;
+}
+
+[data-theme="light"] .flash-stepper-controls {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.btn-flash-swap {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s ease, color 0.15s ease;
+  user-select: none;
+}
+
+.btn-flash-swap:hover {
+  background: rgba(232, 184, 75, 0.25);
+  color: #f7ce68;
+}
+
+.flash-swap-counter {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 0 0.35rem;
+  user-select: none;
+}
+
+.flash-swap-counter strong {
+  color: #f7ce68;
+}
+
+[data-theme="light"] .flash-swap-counter strong {
+  color: #b45309;
+}
+
+.flash-slides-wrapper {
+  position: relative;
+  min-height: 96px;
+}
+
+.flash-slide-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.flash-dots-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.flash-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.22s ease;
+}
+
+.flash-dot.active {
+  width: 22px;
+  background: #f5c518;
+  box-shadow: 0 0 8px rgba(245, 197, 24, 0.5);
+}
+
+[data-theme="light"] .flash-dot {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .flash-dot.active {
+  background: #d97706;
+}
+
 .flash-banner-inner {
   display: flex;
   align-items: center;
@@ -6153,6 +6277,7 @@ p { color: var(--text-muted); margin: 0 0 1em; }
   display: flex;
   align-items: center;
 }
+
 
 .flash-pulse-badge {
   display: inline-flex;

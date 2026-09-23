@@ -34,15 +34,13 @@
       <div class="flash-slides-wrapper" id="flash-slides-wrapper">
         {% for m in latest_movies %}
           <div class="flash-slide-item {{ 'active' if loop.first }}" data-slide-index="{{ loop.index0 }}" style="{{ 'display: flex;' if loop.first else 'display: none;' }}">
-            <div class="flash-content-main">
+            <a href="{{ url_for('items.detail', item_id=m.id) }}" target="_blank" rel="noopener noreferrer" class="flash-content-main flash-banner-clickable" title="Click to open {{ m.title }} description, ratings & reviews in a new tab">
               <div class="flash-poster-thumb">
-                <a href="{{ url_for('items.detail', item_id=m.id) }}" class="flash-poster-link btn-open-item-modal" data-item-id="{{ m.id }}" title="Click to view {{ m.title }} details & reviews">
-                  {% if m.image_url %}
-                    <img src="{{ m.image_url }}" alt="{{ m.title }}" loading="lazy">
-                  {% else %}
-                    <div class="flash-poster-placeholder">🎬</div>
-                  {% endif %}
-                </a>
+                {% if m.image_url %}
+                  <img src="{{ m.image_url }}" alt="{{ m.title }}" loading="lazy">
+                {% else %}
+                  <div class="flash-poster-placeholder">🎬</div>
+                {% endif %}
               </div>
 
               <div class="flash-details">
@@ -51,16 +49,14 @@
                   {% if m.parsed_genres %}
                     <div class="flash-genre-tags">
                       {% for tag in m.parsed_genres %}
-                        <a href="{{ url_for('items.browse', type='movie', genre=tag) }}" class="flash-genre-tag">#{{ tag }}</a>
+                        <span class="flash-genre-tag">#{{ tag }}</span>
                       {% endfor %}
                     </div>
                   {% endif %}
                 </div>
 
                 <h2 class="flash-item-title">
-                  <a href="{{ url_for('items.detail', item_id=m.id) }}" class="flash-title-link btn-open-item-modal" data-item-id="{{ m.id }}" title="Click to view details & reviews">
-                    {{ m.title }}
-                  </a>
+                  {{ m.title }} <span class="open-tab-hint" title="Opens in new tab">↗</span>
                 </h2>
 
                 <div class="flash-item-stats">
@@ -74,11 +70,11 @@
                   {% endif %}
                 </div>
               </div>
-            </div>
+            </a>
 
             <div class="flash-actions-col">
-              <a href="{{ url_for('items.detail', item_id=m.id) }}" class="btn-flash-detail btn-open-item-modal" data-item-id="{{ m.id }}" title="View description, ratings & community reviews">
-                💬 Details & Reviews
+              <a href="{{ url_for('items.detail', item_id=m.id) }}" target="_blank" rel="noopener noreferrer" class="btn-flash-detail" title="Open {{ m.title }} description, ratings & community reviews in a new tab">
+                ↗ Reviews & Details
               </a>
               <a href="{{ url_for('agent.index', q=m.title) }}" class="btn-flash-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ m.title|replace('\'', '\\\'') }}'); return false; }" title="Ask चित्राङ्कः about this movie">
                 🤖 Ask चित्राङ्कः
@@ -153,7 +149,7 @@
       {% set current = user_ratings.get(item['id']) %}
       <div class="item-card item-card-{{ item['type'] }}" data-item-id="{{ item['id'] }}">
         <div class="item-media">
-          <a href="{{ url_for('items.detail', item_id=item['id']) }}" class="item-media-link btn-open-item-modal" data-item-id="{{ item['id'] }}" title="Click to view {{ item['title'] }} description, ratings & comments">
+          <a href="{{ url_for('items.detail', item_id=item['id']) }}" target="_blank" rel="noopener noreferrer" class="item-media-link" title="Open {{ item['title'] }} description, ratings & reviews in a new tab">
             {% if item.image_url %}
               <img src="{{ item.image_url }}" alt="{{ item['title'] }}" loading="lazy">
             {% else %}
@@ -173,8 +169,8 @@
             {% endif %}
           </div>
           <h3>
-            <a href="{{ url_for('items.detail', item_id=item['id']) }}" class="item-card-title-link btn-open-item-modal" data-item-id="{{ item['id'] }}" title="Click to view details & reviews">
-              {{ item['title'] }}
+            <a href="{{ url_for('items.detail', item_id=item['id']) }}" target="_blank" rel="noopener noreferrer" class="item-card-title-link" title="Open {{ item['title'] }} in a new tab">
+              {{ item['title'] }} <span class="open-tab-hint-sm" title="Opens in new tab">↗</span>
             </a>
           </h3>
 
@@ -200,8 +196,8 @@
           </div>
 
           <div class="item-card-actions-row">
-            <a href="{{ url_for('items.detail', item_id=item['id']) }}" class="btn-item-detail-action btn-open-item-modal" data-item-id="{{ item['id'] }}" title="View description, ratings & community reviews">
-              💬 Details & Reviews
+            <a href="{{ url_for('items.detail', item_id=item['id']) }}" target="_blank" rel="noopener noreferrer" class="btn-item-detail-action" title="Open {{ item['title'] }} description, ratings & community reviews in a new tab">
+              ↗ Reviews & Details
             </a>
             {% if item['type'] in ('movie', 'song') %}
               <a href="{{ url_for('agent.index', q=item['title']) }}" class="btn-ask-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ item.title|replace('\'', '\\\'') }}'); return false; }" title="चित्राङ्कः से पूछें (Ask चित्राङ्कः)">
@@ -450,18 +446,6 @@
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && modal.style.display === 'flex') {
       closeItemModal();
-    }
-  });
-
-  // Attach click listener to all .btn-open-item-modal triggers
-  document.addEventListener('click', function(e) {
-    const trigger = e.target.closest('.btn-open-item-modal');
-    if (trigger) {
-      const itemId = trigger.getAttribute('data-item-id');
-      if (itemId) {
-        e.preventDefault();
-        openItemModal(itemId);
-      }
     }
   });
 

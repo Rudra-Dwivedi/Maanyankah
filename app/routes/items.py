@@ -259,10 +259,10 @@ def detail(item_id):
         SELECT p.*, u.username, u.avatar_url, u.role AS user_role
         FROM posts p
         JOIN users u ON p.user_id = u.id
-        WHERE p.item_id = ?
+        WHERE p.item_id = ? OR (p.item_id IS NULL AND LOWER(p.content) LIKE '%' || LOWER(?) || '%')
         ORDER BY p.is_pinned DESC, p.created_at DESC
         """,
-        (item_id,),
+        (item_id, item_dict["title"]),
     ).fetchall()
 
     comments = []

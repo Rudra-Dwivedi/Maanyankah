@@ -6667,6 +6667,33 @@ p { color: var(--text-muted); margin: 0 0 1em; }
 [data-theme="light"] .vibe-audio-badge {
   background: rgba(13, 148, 136, 0.08);
   color: #0f766e;
+  border-color: rgba(13, 148, 136, 0.25);
+}
+
+.flash-banner-clickable {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  transition: opacity 0.15s ease;
+}
+.flash-banner-clickable:hover .flash-item-title {
+  color: var(--accent-movies);
+}
+.open-tab-hint {
+  font-size: 0.95rem;
+  opacity: 0.6;
+  margin-left: 0.3rem;
+  font-weight: 400;
+  vertical-align: middle;
+}
+.open-tab-hint-sm {
+  font-size: 0.8rem;
+  opacity: 0.6;
+  margin-left: 0.2rem;
+  font-weight: 400;
+}
+
 /* ==========================================================================
    Item Detail Page & Interactive Reviews Modal Styling
    ========================================================================== */

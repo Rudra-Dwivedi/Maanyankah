@@ -116,10 +116,10 @@
       <section class="detail-card detail-comments-section" id="community-comments">
         <div class="comments-head">
           <h2 class="detail-card-heading">
-            💬 Community Reviews & Comments
+            💬 Reviews Tagged to {{ item.title }}
             <span class="badge-count">{{ comments|length }}</span>
           </h2>
-          <span class="text-muted-sm">Share your perspective with fellow fans</span>
+          <span class="text-muted-sm">Real thoughts & discussions from fans who tagged this {{ item.type }}</span>
         </div>
 
         <!-- Add Comment Form -->
@@ -133,16 +133,16 @@
                   <span>{{ g.user.username[:1].upper() }}</span>
                 {% endif %}
               </div>
-              <textarea name="content" rows="3" required placeholder="What are your thoughts on {{ item.title }}? Share your review or discussion point..."></textarea>
+              <textarea name="content" rows="3" required placeholder="Write a review tagged to {{ item.title }}... Share your thoughts, rating context, or standout moments..."></textarea>
             </div>
             <div class="comment-form-actions">
-              <span class="sentiment-hint">⚡ Automated sentiment analysis tags every community post</span>
-              <button type="submit" class="btn btn-small">Post Comment</button>
+              <span class="sentiment-hint">⚡ Sentiment analysis tags your review automatically</span>
+              <button type="submit" class="btn btn-small">Post Review</button>
             </div>
           </form>
         {% else %}
           <div class="comment-login-prompt">
-            <p>Want to join the discussion? <a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to write a review on {{ item.title }}.</p>
+            <p>Want to review this {{ item.type }}? <a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to write a review tagged to {{ item.title }}.</p>
           </div>
         {% endif %}
 
@@ -180,8 +180,8 @@
           {% else %}
             <div class="empty-comments">
               <div class="empty-icon">💭</div>
-              <p>No community reviews on {{ item.title }} yet.</p>
-              <p class="empty-sub">Be the first fan to leave your feedback and set the tone!</p>
+              <p>No community reviews tagged to {{ item.title }} yet.</p>
+              <p class="empty-sub">Be the first fan to review this {{ item.type }} and share your perspective!</p>
             </div>
           {% endif %}
         </div>
@@ -279,3 +279,4 @@
 
 </div>
 {% endblock %}
+

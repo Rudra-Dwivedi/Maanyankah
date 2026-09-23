@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }} — मन्यांकः Catalog{% endblock %}
+
+{% block content %}
+<div class="container page item-detail-page">
+
+  <!-- Breadcrumbs -->
+  <nav class="detail-breadcrumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('feed.feed') }}" class="breadcrumb-link">Feed</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('items.browse') }}" class="breadcrumb-link">Browse</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('items.browse', type=item.type) }}" class="breadcrumb-link">{{ item.type|capitalize }}s</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ item.title }}</span>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="item-detail-hero item-hero-{{ item.type }}">
+    <div class="detail-poster-col">
+      <div class="detail-poster-wrap">
+        {% if item.image_url %}
+          <img src="{{ item.image_url }}" alt="{{ item.title }}" class="detail-poster-img">
+        {% else %}
+          <div class="detail-poster-placeholder">
+            {% if item.type == 'movie' %}🎬{% elif item.type == 'song' %}🎵{% else %}🏆{% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="detail-info-col">
+      <div class="detail-meta-badges">
+        <span class="chip chip-{{ item.type }}">{{ item.type|upper }}</span>
+        {% if details.release_date %}
+          <span class="detail-meta-chip">📅 {{ details.release_date[:4] }}</span>
+        {% endif %}
+        {% if details.runtime %}
+          <span class="detail-meta-chip">⏱️ {{ details.runtime }}</span>
+        {% endif %}
+        {% if details.vibe %}
+          <span class="detail-meta-chip">⚡ {{ details.vibe }}</span>
+        {% endif %}
+        {% if details.vote_average and details.vote_average > 0 %}
+          <span class="detail-meta-chip tmdb-score-chip">🎬 TMDB: {{ details.vote_average }}/10</span>
+        {% endif %}
+      </div>
+
+      <h1 class="detail-title">{{ item.title }}</h1>
+
+      <!-- Credits Info -->
+      <div class="detail-credits-list">
+        {% if details.director %}
+          <div class="credit-row"><span class="credit-label">Director:</span> <strong class="credit-val">{{ details.director }}</strong></div>
+        {% endif %}
+        {% if details.artist %}
+          <div class="credit-row"><span class="credit-label">Artist:</span> <strong class="credit-val">{{ details.artist }}</strong></div>
+        {% endif %}
+        {% if details.album %}
+          <div class="credit-row"><span class="credit-label">Album:</span> <span class="credit-val">{{ details.album }}</span></div>
+        {% endif %}
+        {% if details.cast %}
+          <div class="credit-row"><span class="credit-label">Starring:</span> <span class="credit-val">{{ details.cast }}</span></div>
+        {% endif %}
+      </div>
+
+      <!-- Clickable Genre Chips -->
+      {% if details.genres %}
+        <div class="detail-genres-wrap">
+          {% for tag in details.genres %}
+            <a href="{{ url_for('items.browse', type=item.type, genre=tag) }}" class="genre-tag-chip">#{{ tag }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Action Buttons -->
+      <div class="detail-actions-row">
+        {% if item.type in ('movie', 'song') %}
+          <a href="{{ url_for('agent.index', q=item.title) }}" class="btn btn-ask-agent-lg" title="Ask चित्राङ्कः deep cultural intelligence">
+            🤖 Ask चित्राङ्कः
+          </a>
+        {% endif %}
+        {% if g.user and item.type in ('movie', 'song') %}
+          <button type="button" class="btn-ghost btn-item-collection-quick" data-item-id="{{ item.id }}" data-item-title="{{ item.title }}" data-item-type="{{ item.type }}">
+            📁 + Collection
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Content Grid: Left (Description & Comments) / Right (Ratings & Stats) -->
+  <div class="detail-main-layout">
+
+    <div class="detail-primary-content">
+
+      <!-- Description Section -->
+      <section class="detail-card detail-description-section">
+        <h2 class="detail-card-heading">
+          {% if item.type == 'movie' %}📖 Synopsis & Overview
+          {% elif item.type == 'song' %}🎵 Meaning & Audio Architecture
+          {% else %}🏆 Team Legacy & Franchise Profile
+          {% endif %}
+        </h2>
+        <div class="detail-description-body">
+          <p class="description-text">{{ details.description }}</p>
+          {% if details.themes %}
+            <div class="detail-thematic-note">
+              <strong>Core Themes & Craft:</strong> {{ details.themes }}
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- Community Comments Section -->
+      <section class="detail-card detail-comments-section" id="community-comments">
+        <div class="comments-head">
+          <h2 class="detail-card-heading">
+            💬 Community Reviews & Comments
+            <span class="badge-count">{{ comments|length }}</span>
+          </h2>
+          <span class="text-muted-sm">Share your perspective with fellow fans</span>
+        </div>
+
+        <!-- Add Comment Form -->
+        {% if g.user %}
+          <form method="post" action="{{ url_for('items.add_comment', item_id=item.id) }}" class="detail-comment-form">
+            <div class="comment-input-wrap">
+              <div class="user-avatar-tiny">
+                {% if g.user.avatar_url %}
+                  <img src="{{ g.user.avatar_url }}" alt="{{ g.user.username }}">
+                {% else %}
+                  <span>{{ g.user.username[:1].upper() }}</span>
+                {% endif %}
+              </div>
+              <textarea name="content" rows="3" required placeholder="What are your thoughts on {{ item.title }}? Share your review or discussion point..."></textarea>
+            </div>
+            <div class="comment-form-actions">
+              <span class="sentiment-hint">⚡ Automated sentiment analysis tags every community post</span>
+              <button type="submit" class="btn btn-small">Post Comment</button>
+            </div>
+          </form>
+        {% else %}
+          <div class="comment-login-prompt">
+            <p>Want to join the discussion? <a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to write a review on {{ item.title }}.</p>
+          </div>
+        {% endif %}
+
+        <!-- Comments List -->
+        <div class="detail-comments-list">
+          {% if comments %}
+            {% for c in comments %}
+              <div class="comment-item {{ 'comment-pinned' if c.is_pinned }}">
+                <div class="comment-author-avatar">
+                  {% if c.avatar_url %}
+                    <img src="{{ c.avatar_url }}" alt="{{ c.username }}">
+                  {% else %}
+                    <span>{{ c.username[:1].upper() }}</span>
+                  {% endif %}
+                </div>
+                <div class="comment-content-wrap">
+                  <div class="comment-meta">
+                    <strong class="comment-username">{{ c.username }}</strong>
+                    {% if c.user_role == 'admin' %}
+                      <span class="chip-admin-xs">ADMIN</span>
+                    {% endif %}
+                    <span class="comment-date text-muted-sm">{{ c.created_at[:16] if c.created_at else '' }}</span>
+                    {% if c.sentiment_label %}
+                      <span class="sentiment-pill sentiment-{{ c.sentiment_label }}">
+                        {{ c.sentiment_label|capitalize }}
+                      </span>
+                    {% endif %}
+                  </div>
+                  <div class="comment-body">
+                    {{ c.content }}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-comments">
+              <div class="empty-icon">💭</div>
+              <p>No community reviews on {{ item.title }} yet.</p>
+              <p class="empty-sub">Be the first fan to leave your feedback and set the tone!</p>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right Sidebar: Rating Stats & Your Score -->
+    <aside class="detail-sidebar">
+
+      <!-- Ratings Card -->
+      <section class="detail-card detail-ratings-widget">
+        <h3 class="sidebar-heading">Community Rating</h3>
+
+        <div class="ratings-hero-score">
+          <div class="score-number-big">
+            <span class="star-gold-lg">★</span>
+            <span class="score-val">{{ stats.avg_rating or '0.0' }}</span>
+            <span class="score-scale">/ 5</span>
+          </div>
+          <div class="score-summary-text">
+            Based on <strong>{{ stats.rating_count or 0 }}</strong> community {{ 'rating' if stats.rating_count == 1 else 'ratings' }}
+          </div>
+        </div>
+
+        <!-- Star Distribution Breakdown -->
+        <div class="star-bars-distribution">
+          {% for star in [5, 4, 3, 2, 1] %}
+            {% set count = stats['stars_' ~ star] or 0 %}
+            {% set total = stats.rating_count or 0 %}
+            {% set pct = (count / total * 100)|round if total > 0 else 0 %}
+            <div class="star-bar-row">
+              <span class="star-bar-label">{{ star }} ★</span>
+              <div class="star-bar-track">
+                <div class="star-bar-fill star-bar-{{ star }}" style="width: {{ pct }}%;"></div>
+              </div>
+              <span class="star-bar-count text-muted-sm">{{ count }}</span>
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- User Rate Widget -->
+        <div class="detail-user-rate-box">
+          <h4 class="rate-box-title">
+            {% if user_rating %}
+              Your Rating: <span class="user-score-badge">{{ user_rating }} / 5 ★</span>
+            {% else %}
+              Rate This {{ item.type|capitalize }}
+            {% endif %}
+          </h4>
+
+          {% if g.user %}
+            <form method="post" action="{{ url_for('items.rate', item_id=item.id) }}" class="detail-star-form">
+              <div class="star-rating" title="Select 1 to 5 stars">
+                {% for r in [5, 4, 3, 2, 1] %}
+                  <input type="radio" id="detail-r{{ r }}" name="rating" value="{{ r }}" {{ 'checked' if user_rating == r }} onchange="this.form.submit()">
+                  <label for="detail-r{{ r }}" title="{{ r }} star{% if r > 1 %}s{% endif %}">★</label>
+                {% endfor %}
+              </div>
+              <span class="text-muted-xs">Click a star to update your rating instantly</span>
+            </form>
+          {% else %}
+            <p class="text-muted-sm"><a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to save your personal star rating.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- Related Items of Same Type -->
+      {% if related_items %}
+        <section class="detail-card detail-related-widget">
+          <h3 class="sidebar-heading">More {{ item.type|capitalize }}s</h3>
+          <div class="related-items-list">
+            {% for rel in related_items %}
+              <a href="{{ url_for('items.detail', item_id=rel.id) }}" class="related-item-link">
+                <div class="related-thumb">
+                  {% if rel.image_url %}
+                    <img src="{{ rel.image_url }}" alt="{{ rel.title }}" loading="lazy">
+                  {% else %}
+                    <span class="related-glyph">{{ '🎬' if rel.type == 'movie' else ('🎵' if rel.type == 'song' else '🏆') }}</span>
+                  {% endif %}
+                </div>
+                <div class="related-info">
+                  <strong class="related-title">{{ rel.title }}</strong>
+                  <span class="related-score">★ {{ rel.avg_rating }} ({{ rel.rating_count }})</span>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        </section>
+      {% endif %}
+
+    </aside>
+
+  </div>
+
+</div>
+{% endblock %}

@@ -26,12 +26,15 @@ def api_keys():
 @admin_required
 def fetch_movies():
     try:
+        pages = request.form.get("pages", 3, type=int)
+        pages = max(1, min(pages, 10))
         db = get_db()
-        items = tmdb_client.fetch_popular_movies()
+        items = tmdb_client.fetch_popular_movies(pages=pages)
         inserted, skipped = tmdb_client.save_items(db, items)
-        msg = f"Loaded {inserted} new popular movies from TMDB."
+        msg = f"Fetched {len(items)} popular movies from TMDB across {pages} page(s) ({inserted} new added"
         if skipped > 0:
-            msg += f" ({skipped} duplicates safely skipped)"
+            msg += f", {skipped} duplicates safely skipped"
+        msg += ")."
         flash(msg)
     except Exception as e:
         flash(f"Couldn't fetch movies: {e}")

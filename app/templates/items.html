@@ -36,11 +36,13 @@
           <div class="flash-slide-item {{ 'active' if loop.first }}" data-slide-index="{{ loop.index0 }}" style="{{ 'display: flex;' if loop.first else 'display: none;' }}">
             <div class="flash-content-main">
               <div class="flash-poster-thumb">
-                {% if m.image_url %}
-                  <img src="{{ m.image_url }}" alt="{{ m.title }}" loading="lazy">
-                {% else %}
-                  <div class="flash-poster-placeholder">🎬</div>
-                {% endif %}
+                <a href="{{ url_for('items.detail', item_id=m.id) }}" class="flash-poster-link btn-open-item-modal" data-item-id="{{ m.id }}" title="Click to view {{ m.title }} details & reviews">
+                  {% if m.image_url %}
+                    <img src="{{ m.image_url }}" alt="{{ m.title }}" loading="lazy">
+                  {% else %}
+                    <div class="flash-poster-placeholder">🎬</div>
+                  {% endif %}
+                </a>
               </div>
 
               <div class="flash-details">
@@ -55,7 +57,11 @@
                   {% endif %}
                 </div>
 
-                <h2 class="flash-item-title">{{ m.title }}</h2>
+                <h2 class="flash-item-title">
+                  <a href="{{ url_for('items.detail', item_id=m.id) }}" class="flash-title-link btn-open-item-modal" data-item-id="{{ m.id }}" title="Click to view details & reviews">
+                    {{ m.title }}
+                  </a>
+                </h2>
 
                 <div class="flash-item-stats">
                   {% if m.rating_count > 0 %}
@@ -71,6 +77,9 @@
             </div>
 
             <div class="flash-actions-col">
+              <a href="{{ url_for('items.detail', item_id=m.id) }}" class="btn-flash-detail btn-open-item-modal" data-item-id="{{ m.id }}" title="View description, ratings & community reviews">
+                💬 Details & Reviews
+              </a>
               <a href="{{ url_for('agent.index', q=m.title) }}" class="btn-flash-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ m.title|replace('\'', '\\\'') }}'); return false; }" title="Ask चित्राङ्कः about this movie">
                 🤖 Ask चित्राङ्कः
               </a>
@@ -142,15 +151,17 @@
   <div class="item-grid">
     {% for item in items %}
       {% set current = user_ratings.get(item['id']) %}
-      <div class="item-card item-card-{{ item['type'] }}">
+      <div class="item-card item-card-{{ item['type'] }}" data-item-id="{{ item['id'] }}">
         <div class="item-media">
-          {% if item.image_url %}
-            <img src="{{ item.image_url }}" alt="{{ item['title'] }}" loading="lazy">
-          {% else %}
-            <div class="item-placeholder">
-              {% if item['type'] == 'movie' %}🎬{% elif item['type'] == 'song' %}🎵{% else %}🏆{% endif %}
-            </div>
-          {% endif %}
+          <a href="{{ url_for('items.detail', item_id=item['id']) }}" class="item-media-link btn-open-item-modal" data-item-id="{{ item['id'] }}" title="Click to view {{ item['title'] }} description, ratings & comments">
+            {% if item.image_url %}
+              <img src="{{ item.image_url }}" alt="{{ item['title'] }}" loading="lazy">
+            {% else %}
+              <div class="item-placeholder">
+                {% if item['type'] == 'movie' %}🎬{% elif item['type'] == 'song' %}🎵{% else %}🏆{% endif %}
+              </div>
+            {% endif %}
+          </a>
         </div>
         <div class="item-card-body">
           <div class="item-type-row">
@@ -161,7 +172,11 @@
               </button>
             {% endif %}
           </div>
-          <h3>{{ item['title'] }}</h3>
+          <h3>
+            <a href="{{ url_for('items.detail', item_id=item['id']) }}" class="item-card-title-link btn-open-item-modal" data-item-id="{{ item['id'] }}" title="Click to view details & reviews">
+              {{ item['title'] }}
+            </a>
+          </h3>
 
           <!-- Clickable Genre Badges -->
           {% if item.parsed_genres %}
@@ -184,13 +199,16 @@
             {% endif %}
           </div>
 
-          {% if item['type'] in ('movie', 'song') %}
-            <div class="item-agent-link-wrap">
+          <div class="item-card-actions-row">
+            <a href="{{ url_for('items.detail', item_id=item['id']) }}" class="btn-item-detail-action btn-open-item-modal" data-item-id="{{ item['id'] }}" title="View description, ratings & community reviews">
+              💬 Details & Reviews
+            </a>
+            {% if item['type'] in ('movie', 'song') %}
               <a href="{{ url_for('agent.index', q=item['title']) }}" class="btn-ask-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ item.title|replace('\'', '\\\'') }}'); return false; }" title="चित्राङ्कः से पूछें (Ask चित्राङ्कः)">
                 🤖 चित्राङ्कः
               </a>
-            </div>
-          {% endif %}
+            {% endif %}
+          </div>
           {% if g.user %}
             <form method="post" action="{{ url_for('items.rate', item_id=item['id']) }}" class="rate-form">
               <div class="star-rating-wrap">
@@ -369,6 +387,335 @@
     banner.addEventListener('mouseleave', startTimer);
     startTimer();
   })();
+</script>
+
+<!-- Interactive Media Item Detail & Reviews Modal -->
+<div id="itemDetailModal" class="item-modal-overlay" style="display: none;" aria-hidden="true">
+  <div class="item-modal-backdrop" onclick="closeItemModal()"></div>
+  <div class="item-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalItemTitle">
+    <button type="button" class="item-modal-close" onclick="closeItemModal()" title="Close details" aria-label="Close">✕</button>
+    
+    <div id="modalLoadingSpinner" class="modal-loading-box">
+      <div class="modal-spinner"></div>
+      <p>Loading media details & reviews...</p>
+    </div>
+
+    <div id="modalContentContainer" style="display: none;"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const modal = document.getElementById('itemDetailModal');
+  const spinner = document.getElementById('modalLoadingSpinner');
+  const container = document.getElementById('modalContentContainer');
+  let currentModalItemId = null;
+
+  window.openItemModal = async function(itemId) {
+    if (!modal) return;
+    currentModalItemId = itemId;
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    spinner.style.display = 'flex';
+    container.style.display = 'none';
+    container.innerHTML = '';
+
+    try {
+      const resp = await fetch(`/items/${itemId}/quick-view`);
+      if (!resp.ok) throw new Error('Failed to load item');
+      const data = await resp.json();
+      renderModalContent(data);
+    } catch (err) {
+      container.innerHTML = `
+        <div class="modal-error-box">
+          <p>⚠️ Couldn't load item details.</p>
+          <a href="/items/${itemId}" class="btn btn-small">Open full page</a>
+        </div>
+      `;
+      spinner.style.display = 'none';
+      container.style.display = 'block';
+    }
+  };
+
+  window.closeItemModal = function() {
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    currentModalItemId = null;
+  };
+
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modal.style.display === 'flex') {
+      closeItemModal();
+    }
+  });
+
+  // Attach click listener to all .btn-open-item-modal triggers
+  document.addEventListener('click', function(e) {
+    const trigger = e.target.closest('.btn-open-item-modal');
+    if (trigger) {
+      const itemId = trigger.getAttribute('data-item-id');
+      if (itemId) {
+        e.preventDefault();
+        openItemModal(itemId);
+      }
+    }
+  });
+
+  function renderModalContent(data) {
+    const genresHtml = (data.genres || []).map(g => `<span class="modal-genre-tag">#${escapeHtml(g)}</span>`).join(' ');
+    
+    // Comments HTML
+    let commentsListHtml = '';
+    if (data.comments && data.comments.length > 0) {
+      commentsListHtml = data.comments.map(c => `
+        <div class="modal-comment-item">
+          <div class="modal-comment-avatar">
+            ${c.avatar_url ? `<img src="${escapeHtml(c.avatar_url)}" alt="${escapeHtml(c.username)}">` : `<span>${escapeHtml(c.username.charAt(0).toUpperCase())}</span>`}
+          </div>
+          <div class="modal-comment-body">
+            <div class="modal-comment-meta">
+              <strong>${escapeHtml(c.username)}</strong>
+              ${c.user_role === 'admin' ? '<span class="chip-admin-xs">ADMIN</span>' : ''}
+              <span class="modal-comment-time">${escapeHtml(c.created_at_fmt || '')}</span>
+              ${c.sentiment_label ? `<span class="sentiment-pill sentiment-${escapeHtml(c.sentiment_label)}">${escapeHtml(c.sentiment_label.charAt(0).toUpperCase() + c.sentiment_label.slice(1))}</span>` : ''}
+            </div>
+            <div class="modal-comment-text">${escapeHtml(c.content)}</div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      commentsListHtml = `
+        <div class="modal-empty-comments">
+          <p>No community reviews yet. Be the first to share your thoughts!</p>
+        </div>
+      `;
+    }
+
+    // Comment form HTML
+    let commentFormHtml = '';
+    if (data.is_logged_in) {
+      commentFormHtml = `
+        <form id="modalCommentForm" class="modal-comment-form">
+          <div class="modal-comment-input-row">
+            <textarea id="modalCommentInput" rows="2" required placeholder="What did you think of ${escapeHtml(data.title)}? Share a review..."></textarea>
+            <button type="submit" id="modalCommentSubmitBtn" class="btn btn-small">Post</button>
+          </div>
+          <div id="modalCommentFeedback" style="display: none; font-size: 0.8rem; margin-top: 4px;"></div>
+        </form>
+      `;
+    } else {
+      commentFormHtml = `
+        <div class="modal-login-notice">
+          <p><a href="/auth/login" class="link-underline">Log in</a> to write a review on ${escapeHtml(data.title)}.</p>
+        </div>
+      `;
+    }
+
+    // Rate stars HTML
+    let rateStarsHtml = '';
+    for (let r = 5; r >= 1; r--) {
+      const checked = data.user_rating === r ? 'checked' : '';
+      rateStarsHtml += `
+        <input type="radio" id="modal-r${r}" name="modal_rating" value="${r}" ${checked}>
+        <label for="modal-r${r}" title="${r} star${r > 1 ? 's' : ''}">★</label>
+      `;
+    }
+
+    // Credits block
+    let creditsHtml = '';
+    if (data.director) creditsHtml += `<div class="modal-credit-row"><span>Director:</span> <strong>${escapeHtml(data.director)}</strong></div>`;
+    if (data.artist) creditsHtml += `<div class="modal-credit-row"><span>Artist:</span> <strong>${escapeHtml(data.artist)}</strong></div>`;
+    if (data.album) creditsHtml += `<div class="modal-credit-row"><span>Album:</span> <span>${escapeHtml(data.album)}</span></div>`;
+    if (data.cast) creditsHtml += `<div class="modal-credit-row"><span>Starring:</span> <span>${escapeHtml(data.cast)}</span></div>`;
+
+    container.innerHTML = `
+      <div class="modal-hero-split">
+        <div class="modal-poster-col">
+          ${data.image_url ? `<img src="${escapeHtml(data.image_url)}" alt="${escapeHtml(data.title)}" class="modal-poster-img">` : `<div class="modal-poster-placeholder">${data.type === 'movie' ? '🎬' : (data.type === 'song' ? '🎵' : '🏆')}</div>`}
+        </div>
+        <div class="modal-info-col">
+          <div class="modal-badge-row">
+            <span class="chip chip-${escapeHtml(data.type)}">${escapeHtml(data.type.toUpperCase())}</span>
+            ${data.release_date ? `<span class="detail-meta-chip">📅 ${escapeHtml(data.release_date.slice(0, 4))}</span>` : ''}
+            ${data.runtime ? `<span class="detail-meta-chip">⏱️ ${escapeHtml(data.runtime)}</span>` : ''}
+            ${data.vibe ? `<span class="detail-meta-chip">⚡ ${escapeHtml(data.vibe)}</span>` : ''}
+          </div>
+
+          <h2 id="modalItemTitle" class="modal-item-title">${escapeHtml(data.title)}</h2>
+
+          ${creditsHtml}
+          ${genresHtml ? `<div class="modal-genres-tray">${genresHtml}</div>` : ''}
+
+          <div class="modal-rating-banner">
+            <div class="modal-score-badge">
+              <span class="star-gold">★</span>
+              <strong id="modalAvgScoreNum">${data.avg_rating || '0.0'}</strong>
+              <span class="text-muted-sm">/ 5</span>
+              <span class="modal-rating-count" id="modalRatingCountTxt">(${data.rating_count} rating${data.rating_count === 1 ? '' : 's'})</span>
+            </div>
+
+            <div class="modal-user-rate-section">
+              <span class="modal-rate-label">${data.user_rating ? 'Your Rating:' : 'Rate:'}</span>
+              <div class="star-rating modal-stars" title="Click to rate 1-5 stars">
+                ${rateStarsHtml}
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-action-bar">
+            ${data.type !== 'team' ? `<a href="/agent/?q=${encodeURIComponent(data.title)}" class="btn-ask-agent" onclick="if(window.openChitrankah){ window.openChitrankah('${escapeHtml(data.title.replace(/'/g, "\\'"))}'); return false; }">🤖 Ask चित्राङ्कः</a>` : ''}
+            <a href="/items/${data.id}" class="btn-ghost btn-small">🔗 Open Full Page</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-body-content">
+        <div class="modal-description-box">
+          <h3 class="modal-section-title">
+            ${data.type === 'movie' ? '📖 Overview & Synopsis' : (data.type === 'song' ? '🎵 Song Meaning & Architecture' : '🏆 Team Legacy & Details')}
+          </h3>
+          <p class="modal-desc-text">${escapeHtml(data.description || 'No description available for this item.')}</p>
+        </div>
+
+        <div class="modal-comments-box">
+          <h3 class="modal-section-title">
+            💬 Community Reviews & Discussion
+            <span class="badge-count" id="modalCommentsCountBadge">${data.comments ? data.comments.length : 0}</span>
+          </h3>
+
+          ${commentFormHtml}
+
+          <div id="modalCommentsList" class="modal-comments-list">
+            ${commentsListHtml}
+          </div>
+        </div>
+      </div>
+    `;
+
+    spinner.style.display = 'none';
+    container.style.display = 'block';
+
+    // Hook up in-modal rating change
+    const starInputs = container.querySelectorAll('.modal-stars input[type="radio"]');
+    starInputs.forEach(input => {
+      input.addEventListener('change', async function() {
+        const val = this.value;
+        try {
+          const rResp = await fetch(`/items/${data.id}/rate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ rating: val }),
+          });
+          if (rResp.ok) {
+            const rData = await rResp.json();
+            if (rData.success) {
+              const avgNum = document.getElementById('modalAvgScoreNum');
+              const cntTxt = document.getElementById('modalRatingCountTxt');
+              if (avgNum) avgNum.innerText = rData.avg_rating;
+              if (cntTxt) cntTxt.innerText = `(${rData.rating_count} rating${rData.rating_count === 1 ? '' : 's'})`;
+            }
+          }
+        } catch (e) {
+          console.warn('Rating error:', e);
+        }
+      });
+    });
+
+    // Hook up in-modal comment submission
+    const commentForm = document.getElementById('modalCommentForm');
+    if (commentForm) {
+      commentForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const input = document.getElementById('modalCommentInput');
+        const feedback = document.getElementById('modalCommentFeedback');
+        const submitBtn = document.getElementById('modalCommentSubmitBtn');
+        const content = input ? input.value.trim() : '';
+
+        if (!content) return;
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Posting...';
+
+        try {
+          const cResp = await fetch(`/items/${data.id}/comment`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ content: content }),
+          });
+          const cData = await cResp.json();
+
+          if (cData.success && cData.comment) {
+            input.value = '';
+            // Prepend new comment to list
+            const list = document.getElementById('modalCommentsList');
+            const emptyNotice = list.querySelector('.modal-empty-comments');
+            if (emptyNotice) emptyNotice.remove();
+
+            const c = cData.comment;
+            const newCommentEl = document.createElement('div');
+            newCommentEl.className = 'modal-comment-item new-comment-highlight';
+            newCommentEl.innerHTML = `
+              <div class="modal-comment-avatar">
+                ${c.avatar_url ? `<img src="${escapeHtml(c.avatar_url)}" alt="${escapeHtml(c.username)}">` : `<span>${escapeHtml(c.username.charAt(0).toUpperCase())}</span>`}
+              </div>
+              <div class="modal-comment-body">
+                <div class="modal-comment-meta">
+                  <strong>${escapeHtml(c.username)}</strong>
+                  <span class="modal-comment-time">${escapeHtml(c.created_at_fmt)}</span>
+                  ${c.sentiment_label ? `<span class="sentiment-pill sentiment-${escapeHtml(c.sentiment_label)}">${escapeHtml(c.sentiment_label.charAt(0).toUpperCase() + c.sentiment_label.slice(1))}</span>` : ''}
+                </div>
+                <div class="modal-comment-text">${escapeHtml(c.content)}</div>
+              </div>
+            `;
+            list.insertBefore(newCommentEl, list.firstChild);
+
+            // Update badge count
+            const badge = document.getElementById('modalCommentsCountBadge');
+            if (badge) {
+              const cur = parseInt(badge.innerText, 10) || 0;
+              badge.innerText = cur + 1;
+            }
+
+            feedback.style.display = 'block';
+            feedback.style.color = '#4fd1c5';
+            feedback.innerText = `✓ Comment posted successfully! (Sentiment: ${c.sentiment_label})`;
+            setTimeout(() => { feedback.style.display = 'none'; }, 4000);
+          } else {
+            feedback.style.display = 'block';
+            feedback.style.color = '#ff6b6b';
+            feedback.innerText = cData.error || 'Failed to post comment.';
+          }
+        } catch (err) {
+          feedback.style.display = 'block';
+          feedback.style.color = '#ff6b6b';
+          feedback.innerText = 'Network error while posting comment.';
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'Post';
+        }
+      });
+    }
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+})();
 </script>
 {% endblock %}
 

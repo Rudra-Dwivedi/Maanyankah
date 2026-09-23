@@ -1,10 +1,87 @@
-from flask import Blueprint, render_template, request, redirect, url_for, g, flash
+import json
+from flask import Blueprint, render_template, request, redirect, url_for, g, flash, jsonify, abort
 
 from app.db import get_db
 from app.auth_utils import login_required
-from app.services.item_media import with_image_urls
+from app.services.item_media import with_image_urls, resolve_image_url
+from app.services.sentiment import analyze, label
+from app.services.movie_agent import MOVIE_KNOWLEDGE_BASE, SONG_KNOWLEDGE_BASE
 
 bp = Blueprint("items", __name__, url_prefix="/items")
+
+
+def get_item_metadata_and_description(item):
+    """Extract and enrich metadata, narrative overview, and credits for an item."""
+    meta = {}
+    raw_meta = item.get("metadata") if isinstance(item, dict) else item["metadata"]
+    if raw_meta:
+        try:
+            meta = json.loads(raw_meta) if isinstance(raw_meta, str) else raw_meta
+        except Exception:
+            meta = {}
+
+    title = item["title"]
+    item_type = item["type"]
+    clean_title = title.strip().lower()
+
+    description = meta.get("overview") or meta.get("description") or ""
+    release_date = meta.get("release_date") or ""
+    vote_average = meta.get("vote_average") or 0
+    director = meta.get("director") or ""
+    cast = meta.get("cast") or ""
+    artist = meta.get("artist") or ""
+    album = meta.get("album") or ""
+    runtime = meta.get("runtime") or ""
+    vibe = meta.get("vibe") or ""
+    themes = meta.get("themes") or ""
+
+    # Knowledge base enrichment if needed
+    if item_type == "movie":
+        kb = MOVIE_KNOWLEDGE_BASE.get(clean_title)
+        if kb:
+            if not description or len(description) < 40:
+                description = kb.get("synopsis") or description
+            director = director or kb.get("director", "")
+            cast = cast or kb.get("cast", "")
+            runtime = runtime or kb.get("runtime", "")
+            themes = themes or kb.get("themes", "")
+        if not description:
+            description = f"An acclaimed film in the {item.get('genre_tags') or 'popular cinema'} genre, celebrated by the community for its compelling narrative and creative direction."
+
+    elif item_type == "song":
+        kb = SONG_KNOWLEDGE_BASE.get(clean_title)
+        if kb:
+            if not description or len(description) < 40:
+                description = kb.get("meaning") or kb.get("narrative") or kb.get("vibe") or description
+            artist = artist or kb.get("artist", "")
+            album = album or kb.get("album", "")
+            runtime = runtime or kb.get("duration", "")
+            vibe = vibe or kb.get("vibe", "")
+        if not description:
+            description = f"An iconic musical recording in {item.get('genre_tags') or 'popular music'}, recognized for its distinctive production, rhythmic energy, and listener appeal."
+
+    elif item_type == "team":
+        if not description:
+            league_str = f" competing in {item.get('genre_tags')}" if item.get("genre_tags") else ""
+            description = f"A prestigious sports franchise and fan collective{league_str}, renowned for championship legacy, passionate stadium crowds, and competitive excellence."
+
+    tags_raw = item.get("genre_tags") or ""
+    genres = [t.strip() for t in tags_raw.split(",") if t.strip()]
+
+    return {
+        "description": description,
+        "release_date": release_date,
+        "vote_average": vote_average,
+        "director": director,
+        "cast": cast,
+        "artist": artist,
+        "album": album,
+        "runtime": runtime,
+        "vibe": vibe,
+        "themes": themes,
+        "genres": genres,
+        "extra_meta": meta,
+    }
 
 
 @bp.route("/")
@@ -131,11 +208,231 @@ def browse():
 
 
 
+@bp.route("/<int:item_id>")
+def detail(item_id):
+    """Dedicated full-page view for a movie, song, or sports team."""
+    db = get_db()
+    item = db.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    if item is None:
+        abort(404)
+
+    item_dict = dict(item)
+    item_dict["image_url"] = resolve_image_url(item_dict)
+    details = get_item_metadata_and_description(item_dict)
+
+    # Detailed star rating distribution
+    rating_stats = db.execute(
+        """
+        SELECT 
+            COALESCE(ROUND(AVG(rating), 1), 0) AS avg_rating,
+            COUNT(*) AS rating_count,
+            SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) AS stars_5,
+            SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) AS stars_4,
+            SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) AS stars_3,
+            SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) AS stars_2,
+            SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) AS stars_1
+        FROM user_preferences
+        WHERE item_id = ?
+        """,
+        (item_id,),
+    ).fetchone()
+
+    # User's own rating & collections
+    user_rating = None
+    user_collections = []
+    if g.user is not None:
+        user_pref = db.execute(
+            "SELECT rating FROM user_preferences WHERE user_id = ? AND item_id = ?",
+            (g.user["id"], item_id),
+        ).fetchone()
+        if user_pref:
+            user_rating = user_pref["rating"]
+
+        user_collections = db.execute(
+            "SELECT id, title FROM collections WHERE user_id = ? ORDER BY title ASC",
+            (g.user["id"],),
+        ).fetchall()
+
+    # Community comments from posts table
+    comment_rows = db.execute(
+        """
+        SELECT p.*, u.username, u.avatar_url, u.role AS user_role
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.item_id = ?
+        ORDER BY p.is_pinned DESC, p.created_at DESC
+        """,
+        (item_id,),
+    ).fetchall()
+
+    comments = []
+    for c in comment_rows:
+        cd = dict(c)
+        cd["sentiment_label"] = label(cd["sentiment_score"])
+        comments.append(cd)
+
+    # Related items of the same type
+    related_rows = db.execute(
+        """
+        SELECT i.*, COALESCE(ROUND(AVG(p.rating), 1), 0) AS avg_rating, COUNT(p.rating) AS rating_count
+        FROM items i
+        LEFT JOIN user_preferences p ON i.id = p.item_id
+        WHERE i.type = ? AND i.id != ?
+        GROUP BY i.id
+        ORDER BY avg_rating DESC, rating_count DESC
+        LIMIT 4
+        """,
+        (item_dict["type"], item_id),
+    ).fetchall()
+    related_items = with_image_urls(related_rows)
+
+    return render_template(
+        "item_detail.html",
+        item=item_dict,
+        details=details,
+        stats=dict(rating_stats) if rating_stats else {},
+        user_rating=user_rating,
+        user_collections=user_collections,
+        comments=comments,
+        related_items=related_items,
+    )
+
+
+@bp.route("/<int:item_id>/quick-view")
+def quick_view(item_id):
+    """JSON API endpoint for interactive modal quick-view from catalog banners and cards."""
+    db = get_db()
+    item = db.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    if item is None:
+        return jsonify({"error": "Item not found"}), 404
+
+    item_dict = dict(item)
+    item_dict["image_url"] = resolve_image_url(item_dict)
+    details = get_item_metadata_and_description(item_dict)
+
+    rating_stats = db.execute(
+        """
+        SELECT 
+            COALESCE(ROUND(AVG(rating), 1), 0) AS avg_rating,
+            COUNT(*) AS rating_count
+        FROM user_preferences
+        WHERE item_id = ?
+        """,
+        (item_id,),
+    ).fetchone()
+
+    user_rating = None
+    if g.user is not None:
+        user_pref = db.execute(
+            "SELECT rating FROM user_preferences WHERE user_id = ? AND item_id = ?",
+            (g.user["id"], item_id),
+        ).fetchone()
+        if user_pref:
+            user_rating = user_pref["rating"]
+
+    comment_rows = db.execute(
+        """
+        SELECT p.id, p.content, p.sentiment_score, p.created_at, p.is_pinned,
+               u.username, u.avatar_url, u.role AS user_role
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.item_id = ?
+        ORDER BY p.is_pinned DESC, p.created_at DESC
+        LIMIT 30
+        """,
+        (item_id,),
+    ).fetchall()
+
+    comments = []
+    for c in comment_rows:
+        cd = dict(c)
+        cd["sentiment_label"] = label(cd["sentiment_score"])
+        cd["created_at_fmt"] = cd["created_at"][:16] if cd.get("created_at") else ""
+        comments.append(cd)
+
+    return jsonify({
+        "id": item_dict["id"],
+        "title": item_dict["title"],
+        "type": item_dict["type"],
+        "image_url": item_dict["image_url"],
+        "description": details["description"],
+        "genres": details["genres"],
+        "release_date": details["release_date"],
+        "vote_average": details["vote_average"],
+        "director": details["director"],
+        "cast": details["cast"],
+        "artist": details["artist"],
+        "album": details["album"],
+        "runtime": details["runtime"],
+        "vibe": details["vibe"],
+        "themes": details["themes"],
+        "avg_rating": rating_stats["avg_rating"] if rating_stats else 0,
+        "rating_count": rating_stats["rating_count"] if rating_stats else 0,
+        "user_rating": user_rating,
+        "comments": comments,
+        "is_logged_in": g.user is not None,
+    })
+
+
+@bp.route("/<int:item_id>/comment", methods=["POST"])
+@login_required
+def add_comment(item_id):
+    """Submit a community comment/review on a movie, song, or team."""
+    db = get_db()
+    item = db.execute("SELECT id, title, type FROM items WHERE id = ?", (item_id,)).fetchone()
+    if item is None:
+        abort(404)
+
+    is_ajax = request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    if request.is_json:
+        data = request.get_json() or {}
+        content = data.get("content", "").strip()
+    else:
+        content = request.form.get("content", "").strip()
+
+    if not content:
+        if is_ajax:
+            return jsonify({"success": False, "error": "Comment cannot be empty."}), 400
+        flash("Comment cannot be empty.")
+        return redirect(url_for("items.detail", item_id=item_id))
+
+    score = analyze(content)
+    sentiment_text = label(score)
+
+    cursor = db.execute(
+        "INSERT INTO posts (user_id, item_id, content, sentiment_score) VALUES (?, ?, ?, ?)",
+        (g.user["id"], item_id, content, score),
+    )
+    db.commit()
+    new_post_id = cursor.lastrowid
+
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "comment": {
+                "id": new_post_id,
+                "content": content,
+                "sentiment_score": score,
+                "sentiment_label": sentiment_text,
+                "username": g.user["username"],
+                "avatar_url": dict(g.user).get("avatar_url") or "",
+                "created_at_fmt": "Just now",
+            }
+        })
+
+    flash(f"Your comment on '{item['title']}' was posted! (Sentiment: {sentiment_text})")
+    return redirect(url_for("items.detail", item_id=item_id))
+
+
 @bp.route("/<int:item_id>/rate", methods=["POST"])
 @login_required
 def rate(item_id):
-    rating = int(request.form["rating"])
+    rating = int(request.form.get("rating") or (request.json and request.json.get("rating")) or 0)
+    is_ajax = request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
     if rating < 1 or rating > 5:
+        if is_ajax:
+            return jsonify({"success": False, "error": "Rating must be between 1 and 5."}), 400
         flash("Rating must be between 1 and 5.")
         return redirect(url_for("items.browse"))
 
@@ -149,4 +446,18 @@ def rate(item_id):
         (g.user["id"], item_id, rating),
     )
     db.commit()
-    return redirect(request.referrer or url_for("items.browse"))
+
+    if is_ajax:
+        new_stats = db.execute(
+            "SELECT COALESCE(ROUND(AVG(rating), 1), 0) AS avg_rating, COUNT(*) AS rating_count FROM user_preferences WHERE item_id = ?",
+            (item_id,),
+        ).fetchone()
+        return jsonify({
+            "success": True,
+            "user_rating": rating,
+            "avg_rating": new_stats["avg_rating"],
+            "rating_count": new_stats["rating_count"],
+        })
+
+    return redirect(request.referrer or url_for("items.detail", item_id=item_id))
+

@@ -48,7 +48,16 @@
   <div class="fetch-grid">
     <form method="post" action="{{ url_for('settings.fetch_movies') }}" class="fetch-card fetch-card-movies">
       <h3>Popular movies</h3>
-      <p>Pulls the current popular list from TMDB.</p>
+      <p>Pulls the current popular list from TMDB with genre tags and rich overviews.</p>
+      <div style="margin-bottom: 0.8rem;">
+        <label style="font-size: 0.82rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Number of movies to pull:</label>
+        <select name="pages" class="form-control" style="width: 100%; padding: 0.45rem 0.6rem; border-radius: var(--radius); background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-soft);">
+          <option value="1">20 movies (1 page)</option>
+          <option value="2">40 movies (2 pages)</option>
+          <option value="3" selected>60 movies (3 pages)</option>
+          <option value="5">100 movies (5 pages)</option>
+        </select>
+      </div>
       <button type="submit" class="btn-ghost">Fetch movies</button>
     </form>
 

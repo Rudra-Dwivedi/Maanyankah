@@ -8,6 +8,68 @@
     <p class="page-sub">Rate a few things in each category — the more you rate, the sharper your matches and group picks get.</p>
   </div>
 
+  <!-- Newly Added Movie Flash Spotlight Section -->
+  {% if new_movie %}
+    <section class="flash-spotlight-banner" id="flash-spotlight" aria-label="Newly Added Movie Spotlight">
+      <div class="flash-banner-inner">
+        <div class="flash-badge-col">
+          <span class="flash-pulse-badge">
+            <span class="flash-pulse-dot"></span>
+            <span class="flash-badge-text">⚡ JUST ADDED TO CATALOG</span>
+          </span>
+        </div>
+
+        <div class="flash-content-main">
+          <div class="flash-poster-thumb">
+            {% if new_movie.image_url %}
+              <img src="{{ new_movie.image_url }}" alt="{{ new_movie.title }}" loading="lazy">
+            {% else %}
+              <div class="flash-poster-placeholder">🎬</div>
+            {% endif %}
+          </div>
+
+          <div class="flash-details">
+            <div class="flash-meta-top">
+              <span class="flash-item-type">MOVIE</span>
+              {% if new_movie.parsed_genres %}
+                <div class="flash-genre-tags">
+                  {% for tag in new_movie.parsed_genres %}
+                    <a href="{{ url_for('items.browse', type='movie', genre=tag) }}" class="flash-genre-tag">#{{ tag }}</a>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <h2 class="flash-item-title">{{ new_movie.title }}</h2>
+
+            <div class="flash-item-stats">
+              {% if new_movie.rating_count > 0 %}
+                <span class="star-gold">★</span>
+                <strong class="flash-score-num">{{ new_movie.avg_rating }}</strong>
+                <span class="flash-score-scale">/ 5</span>
+                <span class="flash-count">({{ new_movie.rating_count }} {{ 'rating' if new_movie.rating_count == 1 else 'ratings' }})</span>
+              {% else %}
+                <span class="flash-first-rater">🌟 Be the first to rate this film!</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="flash-actions-col">
+          <a href="{{ url_for('agent.index', q=new_movie.title) }}" class="btn-flash-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ new_movie.title|replace('\'', '\\\'') }}'); return false; }" title="Ask चित्राङ्कः about this movie">
+            🤖 Ask चित्राङ्कः
+          </a>
+          {% if g.user %}
+            <button type="button" class="btn-flash-collection btn-item-collection-quick" data-item-id="{{ new_movie.id }}" data-item-title="{{ new_movie.title }}" data-item-type="{{ new_movie.type }}" title="Add to collection">
+              📁 + Collection
+            </button>
+          {% endif %}
+          <button type="button" class="btn-flash-close" id="flash-dismiss-btn" title="Dismiss spotlight" aria-label="Dismiss banner">✕</button>
+        </div>
+      </div>
+    </section>
+  {% endif %}
+
   <div class="filters">
     <a href="{{ url_for('items.browse') }}" class="{{ 'active' if not active_type }}">All</a>
     <a href="{{ url_for('items.browse', type='movie') }}" class="{{ 'active' if active_type == 'movie' }}">Movies</a>
@@ -96,7 +158,7 @@
             {% endif %}
           </div>
 
-          {% if item['type'] == 'movie' %}
+          {% if item['type'] in ('movie', 'song') %}
             <div class="item-agent-link-wrap">
               <a href="{{ url_for('agent.index', q=item['title']) }}" class="btn-ask-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ item.title|replace('\'', '\\\'') }}'); return false; }" title="चित्राङ्कः से पूछें (Ask चित्राङ्कः)">
                 🤖 चित्राङ्कः
@@ -127,4 +189,33 @@
 </div>
 
 {% include "_add_to_collection_modal.html" %}
+
+<script>
+  (function() {
+    var banner = document.getElementById('flash-spotlight');
+    var dismissBtn = document.getElementById('flash-dismiss-btn');
+    if (banner && dismissBtn) {
+      // Check session storage
+      try {
+        if (sessionStorage.getItem('dismissed_flash_spotlight') === 'true') {
+          banner.style.display = 'none';
+        }
+      } catch(e) {}
+
+      dismissBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        banner.style.transition = 'opacity 0.25s ease, transform 0.25s ease, max-height 0.3s ease';
+        banner.style.opacity = '0';
+        banner.style.transform = 'translateY(-8px)';
+        setTimeout(function() {
+          banner.style.display = 'none';
+          try {
+            sessionStorage.setItem('dismissed_flash_spotlight', 'true');
+          } catch(e) {}
+        }, 260);
+      });
+    }
+  })();
+</script>
 {% endblock %}
+

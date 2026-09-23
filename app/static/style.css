@@ -6039,6 +6039,498 @@ p { color: var(--text-muted); margin: 0 0 1em; }
   background: rgba(212, 142, 0, 0.08);
 }
 
+/* ==========================================================================
+   Professional UI Elevation & Sticky Header
+   ========================================================================== */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(18, 20, 26, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+[data-theme="light"] .site-header {
+  background: rgba(245, 246, 250, 0.92);
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.site-nav a {
+  position: relative;
+  font-weight: 500;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+
+.site-nav a:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="light"] .site-nav a:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Enhanced Item Cards Micro-interactions */
+.item-card {
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.24s ease, border-color 0.24s ease;
+}
+
+.item-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.42), 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.item-card-movie:hover {
+  border-color: rgba(232, 184, 75, 0.4);
+  border-top-color: var(--accent-movies);
+}
+
+.item-card-song:hover {
+  border-color: rgba(79, 209, 197, 0.4);
+  border-top-color: var(--accent-music);
+}
+
+.item-card-team:hover {
+  border-color: rgba(232, 93, 75, 0.4);
+  border-top-color: var(--accent-sports);
+}
+
+.item-media img {
+  transition: transform 0.38s cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+.item-card:hover .item-media img {
+  transform: scale(1.045);
+}
+
+[data-theme="light"] .item-card {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .item-card:hover {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   Newly Added Movie Flash Spotlight Banner
+   ========================================================================== */
+.flash-spotlight-banner {
+  position: relative;
+  margin-bottom: 2rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(232, 184, 75, 0.14) 0%, rgba(23, 26, 34, 0.96) 45%, rgba(29, 33, 43, 0.96) 100%);
+  border: 1px solid rgba(232, 184, 75, 0.38);
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.42), 0 0 24px -2px rgba(232, 184, 75, 0.16);
+  overflow: hidden;
+  padding: 1.25rem 1.5rem;
+}
+
+.flash-spotlight-banner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #e8b84b, #f5c518, transparent);
+}
+
+.flash-banner-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.flash-badge-col {
+  display: flex;
+  align-items: center;
+}
+
+.flash-pulse-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(232, 184, 75, 0.18);
+  border: 1px solid rgba(232, 184, 75, 0.5);
+  color: #f7ce68;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.flash-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #f5c518;
+  box-shadow: 0 0 10px #f5c518;
+  animation: flashGlowPulse 1.8s infinite ease-in-out;
+}
+
+@keyframes flashGlowPulse {
+  0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 6px #f5c518; }
+  50% { transform: scale(1.35); opacity: 0.65; box-shadow: 0 0 14px #f5c518; }
+}
+
+.flash-content-main {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex: 1;
+  min-width: 280px;
+}
+
+.flash-poster-thumb {
+  width: 66px;
+  height: 94px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(232, 184, 75, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+  background: var(--surface-raised);
+}
+
+.flash-poster-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.flash-poster-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+}
+
+.flash-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.flash-meta-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.flash-item-type {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-movies);
+}
+
+.flash-genre-tags {
+  display: inline-flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.flash-genre-tag {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.flash-genre-tag:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.flash-item-title {
+  font-size: 1.28rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.flash-item-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  margin-top: 0.15rem;
+}
+
+.flash-score-num {
+  color: #f5c518;
+  font-weight: 700;
+}
+
+.flash-score-scale {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.flash-count {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.flash-first-rater {
+  color: var(--accent-movies);
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+.flash-actions-col {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.btn-flash-agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: linear-gradient(135deg, #e8b84b 0%, #caa038 100%);
+  color: #12141a;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(232, 184, 75, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.btn-flash-agent:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(232, 184, 75, 0.48);
+  color: #12141a;
+}
+
+.btn-flash-collection {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-flash-collection:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-flash-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.btn-flash-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .flash-spotlight-banner {
+  background: linear-gradient(135deg, rgba(232, 184, 75, 0.16) 0%, #ffffff 50%, #fbfbfc 100%);
+  border-color: rgba(212, 142, 0, 0.38);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .flash-pulse-badge {
+  background: rgba(212, 142, 0, 0.12);
+  color: #995c00;
+  border-color: rgba(212, 142, 0, 0.35);
+}
+
+[data-theme="light"] .flash-genre-tag {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .btn-flash-collection {
+  background: #f1f3f8;
+  border-color: #d1d5db;
+  color: #1f2937;
+}
+
+/* ==========================================================================
+   Chitrankah AI: Enhanced Cinema & Music Spotlight
+   ========================================================================== */
+.spotlight-type-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent-movies);
+  background: rgba(232, 184, 75, 0.12);
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  margin-bottom: 0.4rem;
+  border: 1px solid rgba(232, 184, 75, 0.25);
+}
+
+.song-type-badge {
+  color: var(--accent-music);
+  background: rgba(79, 209, 197, 0.12);
+  border-color: rgba(79, 209, 197, 0.25);
+}
+
+.spotlight-credits-line {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+  line-height: 1.4;
+}
+
+.spotlight-artist-line {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.spotlight-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 3px solid var(--accent-movies);
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  margin: 0.85rem 0;
+}
+
+.song-detail-spotlight .spotlight-section {
+  border-left-color: var(--accent-music);
+}
+
+.spotlight-section-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  margin: 0 0 0.45rem;
+}
+
+.spotlight-themes-text,
+.spotlight-craft-text,
+.spotlight-why-text,
+.spotlight-verdict-text,
+.spotlight-accolades-text {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0.35rem 0;
+}
+
+.spotlight-verdict-text {
+  color: var(--accent-movies);
+  font-weight: 500;
+}
+
+.song-detail-spotlight .spotlight-verdict-text {
+  color: var(--accent-music);
+}
+
+/* Vinyl Record Motif for Song Spotlights */
+.song-cover-box {
+  position: relative;
+  overflow: visible;
+}
+
+.song-album-art {
+  border-radius: 8px;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+.vinyl-disc-graphic {
+  position: absolute;
+  top: 10px;
+  right: -18px;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #2a2a2a 0%, #151515 35%, #0a0a0a 70%, #000 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  z-index: 1;
+  opacity: 0.85;
+  transition: transform 0.4s ease;
+}
+
+.song-detail-spotlight:hover .vinyl-disc-graphic {
+  transform: rotate(45deg) translateX(8px);
+}
+
+.song-genre-pill {
+  color: #38b2ac !important;
+  border-color: rgba(79, 209, 197, 0.3) !important;
+  background: rgba(79, 209, 197, 0.08) !important;
+}
+
+.vibe-audio-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.76rem;
+  color: #4fd1c5;
+  background: rgba(79, 209, 197, 0.1);
+  border: 1px solid rgba(79, 209, 197, 0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+[data-theme="light"] .spotlight-section {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .spotlight-type-badge {
+  background: rgba(212, 142, 0, 0.1);
+  color: #b45309;
+  border-color: rgba(212, 142, 0, 0.25);
+}
+
+[data-theme="light"] .song-type-badge {
+  background: rgba(13, 148, 136, 0.1);
+  color: #0d9488;
+  border-color: rgba(13, 148, 136, 0.25);
+}
+
+[data-theme="light"] .vibe-audio-badge {
+  background: rgba(13, 148, 136, 0.08);
+  color: #0f766e;
+  border-color: rgba(13, 148, 136, 0.25);
+}
+
+
 
 
 

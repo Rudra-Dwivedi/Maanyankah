@@ -34,12 +34,16 @@
     <div class="agent-quick-dock">
       <span class="quick-dock-label">💡 Quick prompts:</span>
       <div class="quick-chips-scroller">
-        <button type="button" class="cockpit-chip" data-query="Highest rated movies on Maanyankah">🏆 Top Rated Films</button>
+        <button type="button" class="cockpit-chip" data-query="Tell me about Interstellar">🚀 Interstellar</button>
+        <button type="button" class="cockpit-chip" data-query="Tell me about Bohemian Rhapsody">🎸 Bohemian Rhapsody</button>
+        <button type="button" class="cockpit-chip" data-query="Tell me about Blinding Lights">✨ Blinding Lights</button>
         <button type="button" class="cockpit-chip" data-query="Tell me about Inception">🌀 Inception Breakdown</button>
-        <button type="button" class="cockpit-chip" data-query="What is the rating of The Dark Knight?">🦇 The Dark Knight</button>
-        <button type="button" class="cockpit-chip" data-query="Tell me about Parasite">🏠 Parasite Consensus</button>
-        <button type="button" class="cockpit-chip" data-query="Recommend a sci-fi thriller">🚀 Sci-Fi Thrillers</button>
-        <button type="button" class="cockpit-chip" data-query="Recommend a Christopher Nolan movie">🎬 Nolan Movies</button>
+        <button type="button" class="cockpit-chip" data-query="Tell me about Whiplash">🥁 Whiplash</button>
+        <button type="button" class="cockpit-chip" data-query="Tell me about Lose Yourself">🎤 Lose Yourself (Eminem)</button>
+        <button type="button" class="cockpit-chip" data-query="Tell me about The Dark Knight">🦇 The Dark Knight</button>
+        <button type="button" class="cockpit-chip" data-query="Tell me about Parasite">🏠 Parasite</button>
+        <button type="button" class="cockpit-chip" data-query="Highest rated movies on Maanyankah">🏆 Top Films</button>
+        <button type="button" class="cockpit-chip" data-query="What are the top rated songs?">🎵 Top Songs</button>
       </div>
     </div>
 
@@ -71,8 +75,14 @@
                 <div class="spotlight-info-box">
                   <div class="spotlight-header-meta">
                     <div>
+                      <span class="spotlight-type-badge">CINEMA MASTERWORK</span>
                       <h2 class="spotlight-title">{{ m.title }} <span class="spotlight-year">({{ m.year }})</span></h2>
                       <div class="spotlight-director">Directed by <strong>{{ m.director }}</strong></div>
+                      {% if m.cast %}
+                        <div class="spotlight-credits-line">
+                          <strong>Cast:</strong> {{ m.cast }} {% if m.runtime %}• <strong>Runtime:</strong> {{ m.runtime }}{% endif %}
+                        </div>
+                      {% endif %}
                     </div>
                     <div class="spotlight-avg-badge" title="Maanyankah Community Average Rating">
                       <span class="star-gold">★</span>
@@ -88,7 +98,123 @@
                     {% endfor %}
                   </div>
 
-                  <p class="spotlight-synopsis-text">{{ m.synopsis }}</p>
+                  <div class="spotlight-section">
+                    <h4 class="spotlight-section-title">📖 Narrative Premise & Story Arc</h4>
+                    <p class="spotlight-synopsis-text">{{ m.synopsis }}</p>
+                    {% if m.themes %}
+                      <p class="spotlight-themes-text"><strong>Core Themes:</strong> {{ m.themes }}</p>
+                    {% endif %}
+                  </div>
+
+                  {% if m.cinematic_craft %}
+                    <div class="spotlight-section">
+                      <h4 class="spotlight-section-title">🎥 Cinematic Craft & Audio-Visual Direction</h4>
+                      <p class="spotlight-craft-text">{{ m.cinematic_craft }}</p>
+                    </div>
+                  {% endif %}
+
+                  {% if m.why_watch %}
+                    <div class="spotlight-section">
+                      <h4 class="spotlight-section-title">🌟 Why You Should Watch It</h4>
+                      <p class="spotlight-why-text">{{ m.why_watch }}</p>
+                      {% if m.verdict %}
+                        <p class="spotlight-verdict-text">🏆 <strong>Legacy:</strong> {{ m.verdict }}</p>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+
+                  <div class="spotlight-rating-analytics">
+                    <div class="analytics-header-row">
+                      <span class="analytics-title-text">📊 Community Ratings & Sentiment Consensus</span>
+                      <span class="sentiment-consensus-pill">{{ s.sentiment_summary }}</span>
+                    </div>
+                    <div class="star-distribution-bars">
+                      {% for star_num in [5, 4, 3, 2, 1] %}
+                        {% set b_data = s.breakdown[star_num] %}
+                        <div class="distribution-row">
+                          <span class="dist-star-label">{{ star_num }} ★</span>
+                          <div class="dist-track">
+                            <div class="dist-fill" style="width: {{ b_data.pct }}%"></div>
+                          </div>
+                          <span class="dist-pct-text">{{ b_data.pct }}% <small>({{ b_data.count }})</small></span>
+                        </div>
+                      {% endfor %}
+                    </div>
+
+                    {% if s.posts %}
+                      <div class="spotlight-member-quotes">
+                        <div class="quotes-subheading">💬 Verified Member Reviews:</div>
+                        <div class="quotes-grid">
+                          {% for post in s.posts %}
+                            <div class="quote-card">
+                              <strong class="quote-user">@{{ post.username }}:</strong>
+                              <span class="quote-body">"{{ post.content }}"</span>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+            {% elif initial_response.type == 'song_detail' %}
+              {% set song = initial_response.song %}
+              {% set s = song.stats %}
+              <div class="agent-detail-spotlight song-detail-spotlight">
+                <div class="spotlight-poster-box song-cover-box">
+                  {% if song.image_url %}
+                    <img src="{{ song.image_url }}" alt="{{ song.title }}" class="spotlight-poster-img song-album-art">
+                  {% else %}
+                    <div class="spotlight-poster-empty">🎵</div>
+                  {% endif %}
+                  <div class="vinyl-disc-graphic" aria-hidden="true"></div>
+                </div>
+                <div class="spotlight-info-box">
+                  <div class="spotlight-header-meta">
+                    <div>
+                      <span class="spotlight-type-badge song-type-badge">SONG & MUSIC SPOTLIGHT</span>
+                      <h2 class="spotlight-title">{{ song.title }}</h2>
+                      <div class="spotlight-artist-line">by <strong>{{ song.artist }}</strong> {% if song.album %}• Album: <em>{{ song.album }}</em>{% endif %} <span class="spotlight-year">({{ song.year }})</span></div>
+                    </div>
+                    <div class="spotlight-avg-badge song-avg-badge" title="Maanyankah Community Average Rating">
+                      <span class="star-gold">★</span>
+                      <strong class="avg-score-number">{{ s.avg_rating }}</strong>
+                      <span class="avg-max-score">/ 5</span>
+                      <span class="avg-review-count">({{ s.rating_count }} {{ 'review' if s.rating_count == 1 else 'reviews' }})</span>
+                    </div>
+                  </div>
+
+                  <div class="spotlight-genres-row">
+                    {% for g_tag in song.genres %}
+                      <span class="cockpit-genre-pill song-genre-pill">{{ g_tag }}</span>
+                    {% endfor %}
+                    {% if song.bpm_vibe %}
+                      <span class="vibe-audio-badge">🎧 {{ song.bpm_vibe }}</span>
+                    {% endif %}
+                  </div>
+
+                  <div class="spotlight-section">
+                    <h4 class="spotlight-section-title">📝 Lyrical Meaning & Themes</h4>
+                    <p class="spotlight-synopsis-text">{{ song.lyrical_meaning }}</p>
+                  </div>
+
+                  {% if song.sonic_architecture %}
+                    <div class="spotlight-section">
+                      <h4 class="spotlight-section-title">🎹 Sonic Architecture & Production Craft</h4>
+                      <p class="spotlight-craft-text">{{ song.sonic_architecture }}</p>
+                    </div>
+                  {% endif %}
+
+                  {% if song.accolades %}
+                    <div class="spotlight-section">
+                      <h4 class="spotlight-section-title">🏆 Accolades & Cultural Impact</h4>
+                      <p class="spotlight-accolades-text">{{ song.accolades }}</p>
+                      {% if song.why_listen %}
+                        <p class="spotlight-why-text"><strong>Why Listen:</strong> {{ song.why_listen }}</p>
+                      {% endif %}
+                    </div>
+                  {% endif %}
 
                   <div class="spotlight-rating-analytics">
                     <div class="analytics-header-row">
@@ -404,8 +530,10 @@
           <div class="spotlight-info-box">
             <div class="spotlight-header-meta">
               <div>
-                <h2 class="spotlight-title">${escapeHtml(m.title)} <span class="spotlight-year">(${m.year})</span></h2>
+                <span class="spotlight-type-badge">CINEMA MASTERWORK</span>
+                <h2 class="spotlight-title">${escapeHtml(m.title)} <span class="spotlight-year">(${escapeHtml(m.year)})</span></h2>
                 <div class="spotlight-director">Directed by <strong>${escapeHtml(m.director)}</strong></div>
+                ${m.cast ? `<div class="spotlight-credits-line"><strong>Cast:</strong> ${escapeHtml(m.cast)} ${m.runtime ? `• <strong>Runtime:</strong> ${escapeHtml(m.runtime)}` : ''}</div>` : ''}
               </div>
               <div class="spotlight-avg-badge" title="Maanyankah Community Average Rating">
                 <span class="star-gold">★</span>
@@ -416,7 +544,121 @@
             </div>
 
             <div class="spotlight-genres-row">${genresHtml}</div>
-            <p class="spotlight-synopsis-text">${escapeHtml(m.synopsis)}</p>
+
+            <div class="spotlight-section">
+              <h4 class="spotlight-section-title">📖 Narrative Premise & Story Arc</h4>
+              <p class="spotlight-synopsis-text">${escapeHtml(m.synopsis)}</p>
+              ${m.themes ? `<p class="spotlight-themes-text"><strong>Core Themes:</strong> ${escapeHtml(m.themes)}</p>` : ''}
+            </div>
+
+            ${m.cinematic_craft ? `
+              <div class="spotlight-section">
+                <h4 class="spotlight-section-title">🎥 Cinematic Craft & Audio-Visual Direction</h4>
+                <p class="spotlight-craft-text">${escapeHtml(m.cinematic_craft)}</p>
+              </div>
+            ` : ''}
+
+            ${m.why_watch ? `
+              <div class="spotlight-section">
+                <h4 class="spotlight-section-title">🌟 Why You Should Watch It</h4>
+                <p class="spotlight-why-text">${escapeHtml(m.why_watch)}</p>
+                ${m.verdict ? `<p class="spotlight-verdict-text">🏆 <strong>Legacy:</strong> ${escapeHtml(m.verdict)}</p>` : ''}
+              </div>
+            ` : ''}
+
+            <div class="spotlight-rating-analytics">
+              <div class="analytics-header-row">
+                <span class="analytics-title-text">📊 Community Ratings & Sentiment Consensus</span>
+                <span class="sentiment-consensus-pill">${escapeHtml(s.sentiment_summary)}</span>
+              </div>
+              <div class="star-distribution-bars">${breakdownHtml}</div>
+              ${quotesHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSongDetail(song) {
+      const s = song.stats;
+      let breakdownHtml = '';
+      [5, 4, 3, 2, 1].forEach(function(star) {
+        const b = s.breakdown[star] || { pct: 0, count: 0 };
+        breakdownHtml += `
+          <div class="distribution-row">
+            <span class="dist-star-label">${star} ★</span>
+            <div class="dist-track">
+              <div class="dist-fill" style="width: ${b.pct}%"></div>
+            </div>
+            <span class="dist-pct-text">${b.pct}% <small>(${b.count})</small></span>
+          </div>
+        `;
+      });
+
+      let quotesHtml = '';
+      if (s.posts && s.posts.length > 0) {
+        quotesHtml = `
+          <div class="spotlight-member-quotes">
+            <div class="quotes-subheading">💬 Verified Member Reviews:</div>
+            <div class="quotes-grid">
+              ${s.posts.map(p => `
+                <div class="quote-card">
+                  <strong class="quote-user">@${escapeHtml(p.username)}:</strong>
+                  <span class="quote-body">"${escapeHtml(p.content)}"</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      const genresHtml = (song.genres || []).map(g => `<span class="cockpit-genre-pill song-genre-pill">${escapeHtml(g)}</span>`).join('');
+
+      return `
+        <div class="agent-detail-spotlight song-detail-spotlight">
+          <div class="spotlight-poster-box song-cover-box">
+            ${song.image_url ? `<img src="${song.image_url}" alt="${escapeHtml(song.title)}" class="spotlight-poster-img song-album-art">` : `<div class="spotlight-poster-empty">🎵</div>`}
+            <div class="vinyl-disc-graphic" aria-hidden="true"></div>
+          </div>
+          <div class="spotlight-info-box">
+            <div class="spotlight-header-meta">
+              <div>
+                <span class="spotlight-type-badge song-type-badge">SONG & MUSIC SPOTLIGHT</span>
+                <h2 class="spotlight-title">${escapeHtml(song.title)}</h2>
+                <div class="spotlight-artist-line">by <strong>${escapeHtml(song.artist)}</strong> ${song.album ? `• Album: <em>${escapeHtml(song.album)}</em>` : ''} <span class="spotlight-year">(${escapeHtml(song.year)})</span></div>
+              </div>
+              <div class="spotlight-avg-badge song-avg-badge" title="Maanyankah Community Average Rating">
+                <span class="star-gold">★</span>
+                <strong class="avg-score-number">${s.avg_rating}</strong>
+                <span class="avg-max-score">/ 5</span>
+                <span class="avg-review-count">(${s.rating_count} ${s.rating_count === 1 ? 'review' : 'reviews'})</span>
+              </div>
+            </div>
+
+            <div class="spotlight-genres-row">
+              ${genresHtml}
+              ${song.bpm_vibe ? `<span class="vibe-audio-badge">🎧 ${escapeHtml(song.bpm_vibe)}</span>` : ''}
+            </div>
+
+            <div class="spotlight-section">
+              <h4 class="spotlight-section-title">📝 Lyrical Meaning & Themes</h4>
+              <p class="spotlight-synopsis-text">${escapeHtml(song.lyrical_meaning)}</p>
+            </div>
+
+            ${song.sonic_architecture ? `
+              <div class="spotlight-section">
+                <h4 class="spotlight-section-title">🎹 Sonic Architecture & Production Craft</h4>
+                <p class="spotlight-craft-text">${escapeHtml(song.sonic_architecture)}</p>
+              </div>
+            ` : ''}
+
+            ${song.accolades ? `
+              <div class="spotlight-section">
+                <h4 class="spotlight-section-title">🏆 Accolades & Cultural Impact</h4>
+                <p class="spotlight-accolades-text">${escapeHtml(song.accolades)}</p>
+                ${song.why_listen ? `<p class="spotlight-why-text"><strong>Why Listen:</strong> ${escapeHtml(song.why_listen)}</p>` : ''}
+              </div>
+            ` : ''}
 
             <div class="spotlight-rating-analytics">
               <div class="analytics-header-row">
@@ -458,6 +700,8 @@
       let bodyHtml = '';
       if (data.type === 'movie_detail') {
         bodyHtml = renderMovieDetail(data.movie);
+      } else if (data.type === 'song_detail') {
+        bodyHtml = renderSongDetail(data.song);
       } else if (data.type === 'ranking' || data.type === 'recommendations') {
         bodyHtml = renderGrid(data.title, data.message, data.movies || []);
       } else {
@@ -468,6 +712,7 @@
           </div>
         `;
       }
+
 
       let followupHtml = '';
       if (data.suggestions && data.suggestions.length > 0) {

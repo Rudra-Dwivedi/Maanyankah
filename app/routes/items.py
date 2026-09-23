@@ -90,6 +90,28 @@ def browse():
             (g.user["id"],),
         ).fetchall()
 
+    # Query newly added movie for the flash spotlight section
+    new_movie_row = db.execute(
+        """
+        SELECT i.*,
+               COALESCE(ROUND(AVG(p.rating), 1), 0) AS avg_rating,
+               COUNT(p.rating) AS rating_count
+        FROM items i
+        LEFT JOIN user_preferences p ON i.id = p.item_id
+        WHERE i.type = 'movie'
+        GROUP BY i.id
+        ORDER BY i.id DESC
+        LIMIT 1
+        """
+    ).fetchone()
+
+    new_movie = None
+    if new_movie_row:
+        m_dict = dict(with_image_urls([new_movie_row])[0])
+        raw_tags = m_dict.get("genre_tags") or ""
+        m_dict["parsed_genres"] = [t.strip() for t in raw_tags.split(",") if t.strip()]
+        new_movie = m_dict
+
     return render_template(
         "items.html",
         items=processed_items,
@@ -98,7 +120,9 @@ def browse():
         available_genres=available_genres,
         user_ratings=user_ratings,
         user_collections=user_collections,
+        new_movie=new_movie,
     )
+
 
 
 @bp.route("/<int:item_id>/rate", methods=["POST"])

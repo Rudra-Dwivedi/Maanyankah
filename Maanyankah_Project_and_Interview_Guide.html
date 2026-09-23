@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Maanyankah (मान्यांकः) - Comprehensive Project & Technical Interview Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+
+  @page {
+    size: A4;
+    margin: 15mm 15mm 15mm 15mm;
+    @bottom-right {
+      content: "Page " counter(page);
+      font-size: 8pt;
+      color: #64748b;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #1e293b;
+    line-height: 1.5;
+    font-size: 9pt;
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+
+  h1, h2, h3, h4 {
+    color: #0f172a;
+    font-weight: 700;
+    margin-top: 1.2em;
+    margin-bottom: 0.4em;
+    page-break-after: avoid;
+  }
+
+  h1 {
+    font-size: 19pt;
+    line-height: 1.2;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 5px;
+    margin-top: 0;
+  }
+
+  h2 {
+    font-size: 12pt;
+    color: #0f172a;
+    border-left: 4px solid #d97706;
+    padding-left: 8px;
+    margin-top: 1.3em;
+    margin-bottom: 0.5em;
+  }
+
+  h3 {
+    font-size: 10pt;
+    color: #1e293b;
+    margin-top: 1em;
+    margin-bottom: 0.3em;
+  }
+
+  p { margin: 0 0 0.6em; }
+
+  ul, ol {
+    margin: 0 0 0.6em 1.4em;
+    padding: 0;
+  }
+
+  li {
+    margin-bottom: 0.3em;
+  }
+
+  strong {
+    color: #0f172a;
+    font-weight: 600;
+  }
+
+  code {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 8pt;
+    background: #f1f5f9;
+    color: #b45309;
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid #e2e8f0;
+  }
+
+  pre {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 7.8pt;
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 8px 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 0.5em 0 0.8em;
+    line-height: 1.4;
+    page-break-inside: avoid;
+  }
+
+  pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border: none;
+  }
+
+  .cover-card {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #ffffff;
+    padding: 20px 22px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    border-left: 6px solid #f59e0b;
+  }
+
+  .cover-card h1 {
+    color: #ffffff;
+    font-size: 21pt;
+    border: none;
+    padding: 0;
+    margin: 0 0 5px;
+    font-family: 'Fraunces', Georgia, serif;
+    letter-spacing: -0.5px;
+  }
+
+  .cover-card .sub-title {
+    color: #fbbf24;
+    font-size: 10.5pt;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .cover-card .tagline {
+    font-size: 9pt;
+    color: #cbd5e1;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 8pt;
+  }
+
+  .meta-item strong {
+    color: #f8fafc;
+    display: block;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .meta-item span {
+    color: #e2e8f0;
+  }
+
+  .callout {
+    background: #f8fafc;
+    border-left: 3.5px solid #0284c7;
+    padding: 8px 12px;
+    margin: 0.8em 0;
+    border-radius: 0 6px 6px 0;
+    page-break-inside: avoid;
+  }
+
+  .callout-title {
+    font-weight: 700;
+    color: #0369a1;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .callout-interview {
+    background: #fffbeb;
+    border-left-color: #d97706;
+  }
+
+  .callout-interview .callout-title {
+    color: #b45309;
+  }
+
+  .callout-formula {
+    background: #fdf4ff;
+    border-left-color: #a855f7;
+    padding: 10px 14px;
+  }
+
+  .callout-formula .callout-title {
+    color: #7e22ce;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.7em 0 1em;
+    font-size: 8pt;
+    page-break-inside: avoid;
+  }
+
+  th, td {
+    padding: 5px 8px;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: #f1f5f9;
+    color: #0f172a;
+    font-weight: 600;
+  }
+
+  tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 0.7em 0;
+    page-break-inside: avoid;
+  }
+
+  .card-box {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+
+  .card-box h4 {
+    margin: 0 0 3px;
+    font-size: 8.5pt;
+    color: #0f172a;
+  }
+
+  .qa-block {
+    margin-bottom: 10px;
+    page-break-inside: avoid;
+    border-bottom: 1px dashed #e2e8f0;
+    padding-bottom: 8px;
+  }
+
+  .qa-q {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .qa-q-num {
+    background: #f59e0b;
+    color: #0f172a;
+    font-size: 7.2pt;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+
+  .qa-a {
+    color: #334155;
+    margin-left: 26px;
+    font-size: 8.5pt;
+  }
+
+  .qa-a p { margin-bottom: 3px; }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .toc-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+
+  .toc-title {
+    font-weight: 700;
+    font-size: 9pt;
+    color: #0f172a;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .toc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px 14px;
+    font-size: 8pt;
+  }
+
+  .toc-item {
+    color: #334155;
+    text-decoration: none;
+  }
+
+  /* Beautiful HTML Math Rendering */
+  .math-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0;
+  }
+
+  .math-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 9.5pt;
+    background: #faf5ff;
+    border: 1px solid #e9d5ff;
+    border-radius: 6px;
+    padding: 8px 16px;
+    color: #4c1d95;
+    box-shadow: 0 1px 2px rgba(147, 51, 234, 0.05);
+  }
+
+  .math-sym {
+    font-weight: 600;
+    font-style: italic;
+  }
+
+  .math-frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    padding: 0 4px;
+  }
+
+  .math-num {
+    border-bottom: 1.5px solid #7e22ce;
+    padding-bottom: 2px;
+    text-align: center;
+  }
+
+  .math-den {
+    padding-top: 2px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== PAGE 1 ==================== -->
+<div class="cover-card">
+  <div class="sub-title">TECHNICAL ARCHITECTURE &amp; INTERVIEW MASTER GUIDE</div>
+  <h1>मान्यांकः (Maanyankah)</h1>
+  <div class="tagline">
+    A Social Cinema, Music &amp; Taste Platform with Multi-User Collaborative Filtering, Group Recommender Aggregation, and an AI Cinema Intelligence Agent (चित्राङ्कः).
+  </div>
+  <div class="meta-grid">
+    <div class="meta-item">
+      <strong>Creator / Engineer</strong>
+      <span>Rudra Dwivedi</span>
+    </div>
+    <div class="meta-item">
+      <strong>Core Stack</strong>
+      <span>Python 3.13, Flask, SQLite</span>
+    </div>
+    <div class="meta-item">
+      <strong>ML / AI Domains</strong>
+      <span>Collaborative Filtering, NLP, LLM</span>
+    </div>
+    <div class="meta-item">
+      <strong>Repository</strong>
+      <span>Rudra-Dwivedi/Maanyankah</span>
+    </div>
+  </div>
+</div>
+
+<div class="toc-box">
+  <div class="toc-title">Guide Contents &amp; Roadmap</div>
+  <div class="toc-grid">
+    <div class="toc-item">1. Executive Summary &amp; 30-Sec Elevator Pitch</div>
+    <div class="toc-item">5. Curated Collections &amp; Dynamic Filtering</div>
+    <div class="toc-item">2. High-Level Architecture &amp; Entity Schema</div>
+    <div class="toc-item">6. Architecture Trade-offs &amp; Engineering Design</div>
+    <div class="toc-item">3. Collaborative Filtering &amp; Group Math Engine</div>
+    <div class="toc-item">7. Scalability &amp; Production Evolution</div>
+    <div class="toc-item">4. Chitrankah (चित्राङ्कः) AI Cinema Agent</div>
+    <div class="toc-item">8. Top 15 Technical Interview Q&amp;A (Cheat Sheet)</div>
+  </div>
+</div>
+
+<h2>1. Executive Summary &amp; High-Level Pitch</h2>
+
+<h3>The 30-Second Elevator Pitch (Memorize this for the opener!)</h3>
+<div class="callout callout-interview">
+  <div class="callout-title">🎙️ What you say to the interviewer</div>
+  <p>
+    <em>"<strong>Maanyankah (मान्यांकः)</strong> is a full-stack social taste engine and cinema intelligence platform. It bridges the gap between individual entertainment preferences and group decision-making. Using a custom <strong>User-User Collaborative Filtering</strong> recommender with centered cosine similarity, it predicts items you'll love and pairs you with high-affinity taste-twins. Additionally, it implements a <strong>multi-strategy Group Recommender</strong> using Average Satisfaction and Least Misery principles to solve group watch paralysis. Finally, it features <strong>Chitrankah (चित्राङ्कः)</strong>, an intelligent cinema AI agent that parses community rating distributions and viewer sentiment to deliver conversational movie breakdowns."</em>
+  </p>
+</div>
+
+<h3>The Core Problems It Solves</h3>
+<ol>
+  <li><strong>Individual Silos:</strong> Traditional algorithms optimize purely for a single user in isolation, completely ignoring multi-person social contexts (couples, friends, roommates deciding what to watch together).</li>
+  <li><strong>The Group Compromise Trap (Social Choice Dilemma):</strong> When 4 friends want to watch a movie, picking the highest average rated film often results in one person absolutely hating it (veto dilemma). Maanyankah introduces algorithmic strategy selection (Average vs. Least Misery) to mathematically balance group satisfaction.</li>
+  <li><strong>Superficial 5-Star Ratings:</strong> A raw average of 3.8/5 hides polarized distributions (e.g., 50% 1-star and 50% 5-star vs 100% 4-stars). Maanyankah's AI Agent parses true community distribution curves and sentiment quotes.</li>
+</ol>
+
+<!-- ==================== PAGE 2 ==================== -->
+<div class="page-break"></div>
+
+<h2>2. High-Level System Architecture &amp; Database Schema</h2>
+
+<h3>System Layers</h3>
+<div class="grid-2">
+  <div class="card-box">
+    <h4>1. Presentation Layer (SSR + Progressive AJAX)</h4>
+    <p>Semantic HTML5 &amp; responsive CSS3 custom design tokens supporting Dark/Light modes. Vanilla ES6 AJAX modules for seamless, zero-reload interactions (live rating updates, 1-click collection toggles, avatar DP uploads).</p>
+  </div>
+  <div class="card-box">
+    <h4>2. Application &amp; Controller Layer</h4>
+    <p>Flask 3.1 application factory with 8 modular Blueprints (<code>auth</code>, <code>items</code>, <code>collections</code>, <code>recommend</code>, <code>agent</code>, <code>feed</code>, <code>admin</code>, <code>settings</code>). Session authentication and granular Role-Based Access Control (RBAC).</p>
+  </div>
+  <div class="card-box">
+    <h4>3. Computational &amp; Service Layer</h4>
+    <p>Pure Python mathematical engines: <code>recommender.py</code> (Cosine similarity, group scoring), <code>sentiment.py</code> (NLP polarity scoring), <code>movie_agent.py</code> (heuristic query resolution &amp; AI formatting), and media fetchers.</p>
+  </div>
+  <div class="card-box">
+    <h4>4. Persistence &amp; Integration Layer</h4>
+    <p>SQLite with Foreign Key enforcement and WAL mode. External API gateways to TMDB, Spotify, Apple Music CDN, and TheSportsDB for automated artwork resolution and metadata.</p>
+  </div>
+</div>
+
+<h3>Database Entity-Relationship Schema</h3>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 22%;">Table</th>
+      <th style="width: 40%;">Key Columns &amp; Foreign Keys</th>
+      <th style="width: 38%;">Purpose &amp; Architectural Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>users</code></td>
+      <td><code>id (PK), username (UQ), email, password_hash, role, avatar_url, bio, is_active</code></td>
+      <td>Stores credentials, profile bio, dynamic avatar photo URL, and RBAC roles (<code>user</code> / <code>admin</code>).</td>
+    </tr>
+    <tr>
+      <td><code>items</code></td>
+      <td><code>id (PK), type, external_id, title, genre_tags, metadata, created_at</code></td>
+      <td>Unified catalog storing movies, songs, and sports teams with comma-separated genres and JSON metadata.</td>
+    </tr>
+    <tr>
+      <td><code>user_preferences</code></td>
+      <td><code>id (PK), user_id (FK), item_id (FK), rating (1-5), UNIQUE(user_id, item_id)</code></td>
+      <td>Sparse user-item rating matrix. Enforces 1–5 star ratings and atomic upsert behavior.</td>
+    </tr>
+    <tr>
+      <td><code>follows</code></td>
+      <td><code>follower_id (FK), followed_id (FK), PRIMARY KEY(follower_id, followed_id)</code></td>
+      <td>Directed social graph enabling taste-based following, activity feeds, and group member selection.</td>
+    </tr>
+    <tr>
+      <td><code>groups</code> &amp; <code>members</code></td>
+      <td><code>groups: id, name, created_by; members: group_id, user_id (Composite PK)</code></td>
+      <td>Entity groups for joint recommender sessions.</td>
+    </tr>
+    <tr>
+      <td><code>posts</code></td>
+      <td><code>id (PK), user_id (FK), item_id (FK), content, sentiment_score, is_pinned</code></td>
+      <td>Social micro-reviews tagged to items with automated sentiment polarity scoring.</td>
+    </tr>
+    <tr>
+      <td><code>collections</code></td>
+      <td><code>id (PK), user_id (FK), title, description, is_public, created_at, updated_at</code></td>
+      <td>User-curated playlists / watchlists containing both movies and music. Supports public/private flags.</td>
+    </tr>
+    <tr>
+      <td><code>collection_items</code></td>
+      <td><code>id (PK), collection_id (FK), item_id (FK), note, UNIQUE(collection_id, item_id)</code></td>
+      <td>Many-to-many join linking items to collections with cascading deletion and optional notes.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ==================== PAGE 3 ==================== -->
+<div class="page-break"></div>
+
+<h2>3. Machine Learning &amp; Mathematical Algorithms Deep Dive</h2>
+
+<h3>A. User-User Collaborative Filtering Engine (Taste Matching)</h3>
+<p>
+  The recommender engine discovers individuals with identical aesthetic affinities across films and music. Rather than relying on rigid categorical metadata, it compares empirical rating distributions across shared consumed items.
+</p>
+
+<div class="callout callout-formula">
+  <div class="callout-title">📐 Centered Cosine Similarity (Pearson Baseline) Formulation</div>
+  <p>For two users <em>u</em> and <em>v</em> who have rated a shared intersection of items <em>I<sub>uv</sub> = I<sub>u</sub> &cap; I<sub>v</sub></em>:</p>
+  <div class="math-container">
+    <div class="math-box">
+      <span class="math-sym">s(u, v)</span> = 
+      <span class="math-frac">
+        <span class="math-num">&sum;<sub>i &isin; I<sub>uv</sub></sub> (r<sub>u,i</sub> &minus; r&#772;<sub>u</sub>) &middot; (r<sub>v,i</sub> &minus; r&#772;<sub>v</sub>)</span>
+        <span class="math-den">&radic;[&sum;<sub>i &isin; I<sub>uv</sub></sub> (r<sub>u,i</sub> &minus; r&#772;<sub>u</sub>)&sup2;] &middot; &radic;[&sum;<sub>i &isin; I<sub>uv</sub></sub> (r<sub>v,i</sub> &minus; r&#772;<sub>v</sub>)&sup2;]</span>
+      </span>
+    </div>
+  </div>
+  <p style="font-size: 8pt; margin-top: 4px; color: #581c87;">
+    Where <em>r<sub>u,i</sub></em> is user <em>u</em>'s rating for item <em>i</em>, and <em>r&#772;<sub>u</sub></em> is user <em>u</em>'s mean rating across all rated items. Mean-centering normalizes for user rating biases (optimistic raters who always give 4–5 stars vs critical raters who give 2–3 stars).
+  </p>
+</div>
+
+<p><strong>Predicted Rating Formulation:</strong> To recommend an unrated item <em>i</em> to target user <em>u</em>, we compute a similarity-weighted average over the top-<em>K</em> neighborhood <em>N</em> of similar users who have rated item <em>i</em>:</p>
+<div class="math-container">
+  <div class="math-box">
+    <span class="math-sym">r&#770;<sub>u,i</sub></span> = r&#772;<sub>u</sub> + 
+    <span class="math-frac">
+      <span class="math-num">&sum;<sub>v &isin; N</sub> s(u, v) &middot; (r<sub>v,i</sub> &minus; r&#772;<sub>v</sub>)</span>
+      <span class="math-den">&sum;<sub>v &isin; N</sub> |s(u, v)|</span>
+    </span>
+  </div>
+</div>
+
+<h3>B. Multi-Strategy Group Decision Engine (Solving Compromise Traps)</h3>
+<p>
+  When a group of users <em>G = {u<sub>1</sub>, u<sub>2</sub>, ..., u<sub>m</sub>}</em> wants to select an entertainment item, Maanyankah executes joint preference aggregation under two distinct social choice strategies:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 25%;">Strategy</th>
+      <th style="width: 35%;">Mathematical Objective</th>
+      <th style="width: 40%;">Ideal Scenario &amp; Behavioral Rationale</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>1. Average Satisfaction Strategy (Utilitarian)</strong></td>
+      <td>
+        <div style="font-family: Georgia, serif; font-size: 9pt; padding: 2px 0;">
+          <strong>Score<sub>avg</sub>(i, G)</strong> = <sup>1</sup>&frasl;<sub>|G|</sub> &sum;<sub>u &isin; G</sub> r<sub>u,i</sub>
+        </div>
+        <small style="color: #64748b;">Maximizes aggregate utility across all members.</small>
+      </td>
+      <td>
+        <strong>Best for large parties / general crowds:</strong> Focuses on collective total happiness. Can be susceptible to the "tyranny of the majority" where one minority user intensely dislikes the winner.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>2. Least Misery Strategy (Egalitarian)</strong></td>
+      <td>
+        <div style="font-family: Georgia, serif; font-size: 9pt; padding: 2px 0;">
+          <strong>Score<sub>LM</sub>(i, G)</strong> = min<sub>u &isin; G</sub> { r<sub>u,i</sub> }
+        </div>
+        <small style="color: #64748b;">Maximizes the utility of the least satisfied member.</small>
+      </td>
+      <td>
+        <strong>Best for intimate groups / date nights / roommates:</strong> Prevents any single person from having a terrible evening. A movie rated [4, 4, 4] beats a movie rated [5, 5, 1] because its minimum satisfaction is 4 vs 1.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ==================== PAGE 4 ==================== -->
+<div class="page-break"></div>
+
+<h2>4. Chitrankah (चित्राङ्कः) AI Cinema &amp; Ratings Agent</h2>
+
+<p>
+  Chitrankah is an intelligent cinema co-pilot directly integrated into both a dedicated studio cockpit (<code>/agent/</code>) and a persistent floating widget (<code>_floating_agent.html</code>).
+</p>
+
+<div class="grid-2">
+  <div class="card-box">
+    <h4>Natural Language Query Parsing</h4>
+    <p>Analyzes incoming queries via regex entity recognition and semantic pattern matching. Distinguishes between film deep-dives (<em>"Tell me about Inception"</em>), community ranking requests (<em>"Highest rated movies"</em>), and genre discovery queries (<em>"Recommend a sci-fi thriller"</em>).</p>
+  </div>
+  <div class="card-box">
+    <h4>Empirical Rating Distribution Analysis</h4>
+    <p>Rather than quoting an external IMDb score, Chitrankah dynamically queries SQLite to calculate exact community score distributions (1★ to 5★ curves) and synthesizes genuine viewer quotes logged by community members.</p>
+  </div>
+</div>
+
+<div class="callout callout-interview">
+  <div class="callout-title">💡 How to explain Chitrankah to an interviewer</div>
+  <p>
+    <em>"Chitrankah is designed with a layered architecture: when external LLM API keys (Gemini / OpenAI) are provided via our encrypted UI Settings store, it invokes prompt-engineered generative responses grounded by our live SQL database context. In offline or local development mode, a deterministic heuristic engine analyzes rating distributions, genre tags, and viewer review sentiment to provide instant, zero-latency cinema answers without incurring external API costs."</em>
+  </p>
+</div>
+
+<h2>5. Curated Collections &amp; Dynamic Genre Filtering</h2>
+
+<h3>A. Curated Collections System (Playlists &amp; Watchlists)</h3>
+<ul>
+  <li><strong>Cross-Media Hybrid Playlists:</strong> Users can bundle films and music together (e.g., <em>"Cyberpunk Cinema &amp; Synthwave Beats"</em>) with custom descriptions, item notes, and public/private visibility toggles.</li>
+  <li><strong>2×2 Artwork Mosaic Previews:</strong> Automatically generates visual mosaic thumbnails on collection cards by stitching up to 4 high-definition movie theatrical posters and square song album covers.</li>
+  <li><strong>1-Click Quick Add Modal:</strong> An interactive AJAX modal (<code>_add_to_collection_modal.html</code>) accessible from every movie and song card on the Browse page. Features immediate checkmark state toggling and inline creation of new collections without page reloads.</li>
+</ul>
+
+<h3>B. Dynamic Genre-Wise Filtering</h3>
+<ul>
+  <li><strong>Multi-Dimensional Tag Parsing:</strong> Items store comma-separated genre tags (e.g., <code>sci-fi,thriller,action</code>). The server extracts distinct genres dynamically from the catalog and computes live item counts.</li>
+  <li><strong>Exact Delimited SQL Matching:</strong> Eliminates substring false-positives (e.g., preventing "rock" from matching "hard-rock") using normalized bounding delimiters:
+    <pre><code>WHERE (',' || LOWER(REPLACE(i.genre_tags, ' ', '')) || ',') LIKE '%,sci-fi,%'</code></pre>
+  </li>
+  <li><strong>Interactive UI Controls:</strong> Horizontal scrollable pill bar, active filter alert badge with 1-click reset, and clickable hashtag chips directly on cards.</li>
+</ul>
+
+<!-- ==================== PAGE 5 ==================== -->
+<div class="page-break"></div>
+
+<h2>6. Software Engineering Best Practices &amp; Architecture Decisions</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 25%;">Design Decision</th>
+      <th style="width: 35%;">What Was Chosen</th>
+      <th style="width: 40%;">Technical Justification (Why this over alternatives?)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Architecture Pattern</strong></td>
+      <td>Server-Side Rendering (SSR) with Jinja2 + Progressive AJAX Enhancement</td>
+      <td>Eliminated massive frontend bundle sizes, slow hydration, and SEO penalties of heavy SPAs (React/Angular). Page loads in &lt;100ms with snappy AJAX micro-interactions where needed.</td>
+    </tr>
+    <tr>
+      <td><strong>Database Engine</strong></td>
+      <td>SQLite 3 with Foreign Keys &amp; WAL (Write-Ahead Logging) Mode</td>
+      <td>Zero-config, embedded, and single-file portability. WAL mode allows concurrent readers without blocking writers. Perfect for single-node deployment on Railway/Fly.io.</td>
+    </tr>
+    <tr>
+      <td><strong>Media Fallback Pipeline</strong></td>
+      <td>High-res multi-tier CDN caching (IMDb 1000px, Apple Music, TheSportsDB)</td>
+      <td>Items automatically fallback to clean vector placeholders when artwork is unavailable, eliminating broken images and layout shifts (CLS).</td>
+    </tr>
+    <tr>
+      <td><strong>State Management</strong></td>
+      <td>Flask Request-Scoped Context (<code>g</code>) &amp; Client-Side Cookie Sessions</td>
+      <td>Ensures thread-safe, decoupled database connections per request while preventing connection leaks via <code>teardown_appcontext</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>7. Scalability &amp; System Evolution (How would you scale this?)</h2>
+
+<p>
+  In an interview, you will almost certainly be asked: <em>"This works great for 1,000 users. How would you scale it to 1,000,000 users?"</em> Here is the exact roadmap:
+</p>
+
+<div class="grid-2">
+  <div class="card-box">
+    <h4>1. Recommender Precomputation (Offline Batching)</h4>
+    <p>Computing user-user cosine similarity on the fly becomes <em>O(N &middot; M)</em> at scale. We transition to offline batch matrix factorization (TruncatedSVD / Alternating Least Squares) run on Celery/Redis workers overnight, storing precomputed top-50 recommendations in Redis key-value stores for <em>O(1)</em> lookups.</p>
+  </div>
+  <div class="card-box">
+    <h4>2. Database Migration &amp; Read Replicas</h4>
+    <p>Migrate SQLite to PostgreSQL with PgBouncer connection pooling. Implement primary-replica replication: all rating and post writes go to the primary node, while browse and recommender queries distribute across read replicas.</p>
+  </div>
+  <div class="card-box">
+    <h4>3. Approximate Nearest Neighbors (ANN)</h4>
+    <p>Replace exact cosine similarity matrix scans with vector embeddings (e.g., using FAISS or pgvector with HNSW index) to discover similar taste profiles in sub-millisecond logarithmic time <em>O(log N)</em>.</p>
+  </div>
+  <div class="card-box">
+    <h4>4. Edge Media Caching (CDN &amp; Object Storage)</h4>
+    <p>Offload external image fetching to AWS S3 / Cloudflare R2 with Cloudflare CDN caching, serving responsive WebP/AVIF formats at the edge to achieve 99.9% cache hit ratios.</p>
+  </div>
+</div>
+
+<!-- ==================== PAGE 6 ==================== -->
+<div class="page-break"></div>
+
+<h2>8. Top 15 Technical Interview Questions &amp; Perfect Answers (Part 1)</h2>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q1</span> What was the primary motivation behind building Maanyankah?</div>
+  <div class="qa-a">
+    <p>Entertainment platforms are fundamentally designed for individual consumption. However, media consumption is deeply social. I wanted to build a unified platform that solves social coordination problems: discovering friends who share niche tastes across multiple mediums (film and music), curating hybrid collections, and mathematically solving group decision deadlocks using multi-strategy collaborative choice theory.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q2</span> Why did you use Centered Cosine Similarity instead of standard Euclidean distance or raw Cosine?</div>
+  <div class="qa-a">
+    <p>Raw cosine similarity does not account for user rating bias. For example, a generous user might rate good movies as 5 and average movies as 4, whereas a critical user might rate good movies as 3 and average movies as 2. By subtracting the user's mean rating (<em>r&#772;<sub>u</sub></em>), centered cosine normalizes their psychological baseline, effectively converting cosine similarity into the Pearson Correlation Coefficient over common items.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q3</span> How does your system address the Recommender Cold-Start Problem?</div>
+  <div class="qa-a">
+    <p>For new users with zero ratings, collaborative filtering lacks historical data. Maanyankah employs a hybrid mitigation strategy: new users are presented with popular, high-consensus catalog items on the Browse page; as soon as a user rates 3–5 items, their cosine similarity vector activates. For items with zero ratings, we fallback to genre tag clustering and community ranking.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q4</span> Explain the difference between Average Satisfaction and Least Misery in your group recommender.</div>
+  <div class="qa-a">
+    <p><strong>Average Satisfaction</strong> calculates the arithmetic mean of ratings across all group members. It maximizes total social welfare but can leave a vocal minority extremely unhappy. <strong>Least Misery</strong> takes the minimum rating for each item across all members and ranks by this minimum. It guarantees that the chosen item minimizes the worst-case individual dissatisfaction, making it ideal for date nights or small groups where consensus is critical.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q5</span> How does Chitrankah (चित्राङ्कः) analyze rating curves rather than just averages?</div>
+  <div class="qa-a">
+    <p>A film with an average score of 3.5 could either be universally mediocre (everyone rated 3 or 4) or highly polarized (half gave 1 star, half gave 5 stars). Chitrankah queries the SQLite database for the raw distribution of star counts (1★ through 5★) and calculates the variance. If the bimodal variance exceeds a threshold, it highlights that the film has a polarized reception and extracts top quotes from both ends of the spectrum.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q6</span> How do you prevent race conditions or duplicate entries in the Collection toggle API?</div>
+  <div class="qa-a">
+    <p>At the database layer, the <code>collection_items</code> table enforces a strict <code>UNIQUE(collection_id, item_id)</code> composite constraint. In the application controller, the toggle endpoint checks for existence within a transactional SQLite session: if present, it deletes the row; if absent, it inserts it. Foreign keys are enabled with cascading deletion so orphaned items are never left behind.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q7</span> How does the 2×2 artwork mosaic generation work for Collections?</div>
+  <div class="qa-a">
+    <p>When rendering collection cards on <code>/collections/</code>, the server queries up to 4 distinct items inside that collection. In CSS, we implemented a responsive grid with <code>grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;</code>. Depending on whether the collection contains 1, 2, 3, or 4+ items, CSS rules adapt the mosaic layout seamlessly, displaying high-res theatrical posters and album art with aspect-ratio preservation.</p>
+  </div>
+</div>
+
+<!-- ==================== PAGE 7 ==================== -->
+<div class="page-break"></div>
+
+<h2>8. Top 15 Technical Interview Questions &amp; Perfect Answers (Part 2)</h2>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q8</span> Why did you choose Server-Side Rendering (SSR) with Jinja2 instead of a React or Next.js SPA?</div>
+  <div class="qa-a">
+    <p>For a content and media platform, First Contentful Paint (FCP) and low client memory footprint are paramount. Jinja2 renders complete HTML on the server in &lt;15ms. To maintain a modern app experience, we selectively layered progressive enhancement with Vanilla ES6 AJAX for dynamic actions (liking posts, toggling collections, editing DP photos) without the bundle overhead, hydration delay, and state complexity of a full SPA.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q9</span> How does sentiment analysis work on user posts and feed activity?</div>
+  <div class="qa-a">
+    <p>When a user shares a review or comment on a movie or song, the backend passes the text through our sentiment analysis pipeline (<code>sentiment.py</code>). It computes a normalized compound polarity score between -1.0 (strongly negative) and +1.0 (strongly positive). We then classify the review into visual badges (Positive, Neutral, Critical), allowing fans to quickly gauge the sentiment tone of community discussions.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q10</span> How is user authentication and session security implemented?</div>
+  <div class="qa-a">
+    <p>Passwords are never stored in plain text; they are hashed using Werkzeug's secure implementation of Scrypt / PBKDF2 with unique cryptographic salts. User sessions are signed using Flask's HMAC-SHA256 session cookie mechanism. We implemented <code>@login_required</code> and role verification decorators to prevent Broken Access Control (OWASP Top 10).</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q11</span> How do you handle exact genre tag filtering in SQL without false positives?</div>
+  <div class="qa-a">
+    <p>Items store tags as comma-separated values (e.g., <code>sci-fi,thriller,action</code>). A naive <code>LIKE '%rock%'</code> would incorrectly match <code>hard-rock</code>. In Maanyankah, we wrap both the column and the search query in bounding delimiters: <code>WHERE (',' || LOWER(REPLACE(i.genre_tags, ' ', '')) || ',') LIKE '%,rock,%'</code>. This guarantees 100% exact tag matching directly in SQL.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q12</span> What is the role of SQLite WAL mode in your deployment?</div>
+  <div class="qa-a">
+    <p>Standard SQLite locks the entire database file during writes, causing read latency spikes under concurrent traffic. By enabling Write-Ahead Logging (<code>PRAGMA journal_mode = WAL;</code>), changes are appended to a separate <code>-wal</code> file. This allows readers to continue reading unblocked while a write transaction commits, drastically improving concurrency on single-instance web servers.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q13</span> How does the in-place dynamic profile photo (DP) and bio editor work?</div>
+  <div class="qa-a">
+    <p>The profile page includes an interactive modal (<code>_profile_modal.html</code>). Users can either upload an image file (PNG/JPG) or paste an image URL. Upon submission, an asynchronous AJAX request sends a <code>FormData</code> payload to <code>/auth/profile</code>. The server validates image dimensions and security headers, updates the user's record, and returns a JSON response that updates the DOM avatar and bio instantly without a page reload.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q14</span> What testing methodology was used to verify platform reliability?</div>
+  <div class="qa-a">
+    <p>We built automated end-to-end Python test harnesses (<code>verify_features.py</code>, <code>verify_collections_and_genres.py</code>) using Flask's test client and isolated database fixtures. The tests simulate multi-user sessions, verify collaborative filtering matrix integrity, assert HTTP 200/403/404 response codes, validate JSON API schemas, and enforce privacy authorization checks on private collections.</p>
+  </div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q"><span class="qa-q-num">Q15</span> If you had another 2 weeks, what advanced feature would you implement next?</div>
+  <div class="qa-a">
+    <p>I would implement a hybrid Deep Learning recommender using Two-Tower Neural Networks (one user tower embedding user taste history, and one item tower embedding film/song audio &amp; synopsis embeddings generated via sentence-transformers). This would unify collaborative filtering with content embeddings to solve zero-shot cold start recommendations for newly released media.</p>
+  </div>
+</div>
+
+<!-- FOOTER CALLOUT -->
+<div style="margin-top: 18px; text-align: center; font-size: 8pt; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+  <strong>Maanyankah (मान्यांकः)</strong> • Designed &amp; Developed by Rudra Dwivedi • Full-Stack Social Cinema &amp; Recommendation Platform
+</div>
+
+</body>
+</html>

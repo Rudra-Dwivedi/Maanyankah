@@ -448,3 +448,4 @@ def api_toggle_item():
         "message": msg,
         "collection_title": collection["title"],
     })
+

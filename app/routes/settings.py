@@ -28,8 +28,11 @@ def fetch_movies():
     try:
         db = get_db()
         items = tmdb_client.fetch_popular_movies()
-        tmdb_client.save_items(db, items)
-        flash(f"Loaded {len(items)} popular movies from TMDB.")
+        inserted, skipped = tmdb_client.save_items(db, items)
+        msg = f"Loaded {inserted} new popular movies from TMDB."
+        if skipped > 0:
+            msg += f" ({skipped} duplicates safely skipped)"
+        flash(msg)
     except Exception as e:
         flash(f"Couldn't fetch movies: {e}")
     return redirect(url_for("settings.api_keys"))
@@ -45,8 +48,11 @@ def fetch_music():
     try:
         db = get_db()
         items = spotify_client.fetch_tracks_by_search(query)
-        tmdb_client.save_items(db, items)  # save_items is format-agnostic, works for any item dict
-        flash(f"Loaded {len(items)} tracks matching '{query}'.")
+        inserted, skipped = tmdb_client.save_items(db, items)  # save_items is format-agnostic, works for any item dict
+        msg = f"Loaded {inserted} new tracks matching '{query}'."
+        if skipped > 0:
+            msg += f" ({skipped} duplicates safely skipped)"
+        flash(msg)
     except Exception as e:
         flash(f"Couldn't fetch tracks: {e}")
     return redirect(url_for("settings.api_keys"))
@@ -62,8 +68,12 @@ def fetch_sports():
     try:
         db = get_db()
         items = sports_client.fetch_teams_by_league(league)
-        tmdb_client.save_items(db, items)
-        flash(f"Loaded {len(items)} teams from {league}.")
+        inserted, skipped = tmdb_client.save_items(db, items)
+        msg = f"Loaded {inserted} new teams from {league}."
+        if skipped > 0:
+            msg += f" ({skipped} duplicates safely skipped)"
+        flash(msg)
     except Exception as e:
         flash(f"Couldn't fetch teams: {e}")
     return redirect(url_for("settings.api_keys"))
+

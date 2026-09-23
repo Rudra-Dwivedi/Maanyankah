@@ -19,7 +19,7 @@
     <form method="post" action="{{ url_for('admin.create_item') }}" class="admin-create-form">
       <div class="form-row-3">
         <label>Media Type
-          <select name="type" required>
+          <select name="type" id="adminItemType" required>
             <option value="movie">Movie</option>
             <option value="song">Song / Music Track</option>
             <option value="team">Sports Team / Event</option>
@@ -27,7 +27,8 @@
         </label>
 
         <label>Title
-          <input type="text" name="title" required placeholder="e.g. Interstellar, Starboy, Arsenal FC">
+          <input type="text" name="title" id="adminItemTitle" required placeholder="e.g. Interstellar, Starboy, Arsenal FC" autocomplete="off">
+          <div id="duplicateWarningBadge" style="display: none; margin-top: 5px; font-size: 0.8rem; font-weight: 600; color: #ff6b6b; background: rgba(232, 93, 75, 0.12); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(232, 93, 75, 0.25);"></div>
         </label>
 
         <label>Genre Tags <span class="field-optional">(comma-separated)</span>
@@ -40,7 +41,7 @@
           <input type="url" name="image_url" placeholder="Auto-fetches high-res poster/art if left blank">
         </label>
         <div style="display: flex; align-items: flex-end;">
-          <button type="submit" class="btn btn-small">Save to Catalog</button>
+          <button type="submit" id="adminItemSubmitBtn" class="btn btn-small">Save to Catalog</button>
         </div>
       </div>
     </form>
@@ -72,6 +73,11 @@
     </form>
 
     <div class="admin-quick-action-right" style="margin-left: auto; display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+      <form method="post" action="{{ url_for('admin.deduplicate_catalog') }}" onsubmit="return confirm('Scan and clean any duplicate items in the catalog? Existing ratings, posts, and playlist entries will be safely preserved and merged.');">
+        <button type="submit" class="btn-action-info btn-small" title="Scan catalog for duplicate entries and merge them while preserving all user ratings and posts">
+          🛡️ Deduplicate Catalog
+        </button>
+      </form>
       <form method="post" action="{{ url_for('admin.auto_fetch_images') }}" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Fetching images...';">
         <button type="submit" class="btn-action-success btn-small" title="Automatically discover and save missing images for all items that have none">
           ⚡ Auto-Fetch Missing Images
@@ -155,5 +161,60 @@
   {% endif %}
 
 </div>
+
+<script>
+(function() {
+  const typeSelect = document.getElementById('adminItemType');
+  const titleInput = document.getElementById('adminItemTitle');
+  const badge = document.getElementById('duplicateWarningBadge');
+  const submitBtn = document.getElementById('adminItemSubmitBtn');
+  let debounceTimer = null;
+
+  async function checkDuplicate() {
+    if (!typeSelect || !titleInput || !badge || !submitBtn) return;
+    const type = typeSelect.value.trim();
+    const title = titleInput.value.trim();
+
+    if (!type || title.length < 2) {
+      badge.style.display = 'none';
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+      submitBtn.style.cursor = 'pointer';
+      return;
+    }
+
+    try {
+      const resp = await fetch(`{{ url_for('admin.check_duplicate') }}?type=${encodeURIComponent(type)}&title=${encodeURIComponent(title)}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+
+      if (data.exists) {
+        badge.style.display = 'block';
+        badge.innerHTML = `⚠️ <strong>Duplicate found:</strong> "${data.title}" already exists in the catalog (ID #${data.id}${data.avg_rating ? ', ★ ' + data.avg_rating : ''}). Duplicate entries are blocked.`;
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.5';
+        submitBtn.style.cursor = 'not-allowed';
+      } else {
+        badge.style.display = 'none';
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+      }
+    } catch (e) {
+      console.warn('Duplicate check failed:', e);
+    }
+  }
+
+  if (titleInput) {
+    titleInput.addEventListener('input', function() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(checkDuplicate, 250);
+    });
+  }
+  if (typeSelect) {
+    typeSelect.addEventListener('change', checkDuplicate);
+  }
+})();
+</script>
 {% endblock %}
 

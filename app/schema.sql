@@ -24,6 +24,11 @@ CREATE TABLE IF NOT EXISTS items (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Unique indexes to prevent duplicate movies, songs, or teams in catalog
+CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_type_title ON items(type, LOWER(TRIM(title)));
+CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_type_extid ON items(type, external_id) WHERE external_id IS NOT NULL AND external_id != '';
+
+
 CREATE TABLE IF NOT EXISTS user_preferences (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id),

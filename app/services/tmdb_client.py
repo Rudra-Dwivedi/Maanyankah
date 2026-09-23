@@ -52,11 +52,41 @@ def fetch_popular_movies(page=1):
 
 
 def save_items(db, items):
-    """Insert a list of item dicts (as produced by the fetch_* functions) into the DB."""
+    """Insert a list of item dicts (as produced by the fetch_* functions) into the DB,
+    safely skipping any duplicate items. Returns (inserted_count, skipped_count)."""
+    inserted = 0
+    skipped = 0
     for item in items:
-        db.execute(
-            "INSERT INTO items (type, external_id, title, genre_tags, metadata) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (item["type"], item["external_id"], item["title"], item["genre_tags"], item["metadata"]),
-        )
+        item_type = item.get("type")
+        ext_id = item.get("external_id")
+        title = (item.get("title") or "").strip()
+
+        existing = None
+        if ext_id:
+            existing = db.execute(
+                "SELECT id FROM items WHERE type = ? AND external_id = ?",
+                (item_type, str(ext_id)),
+            ).fetchone()
+
+        if not existing and title:
+            existing = db.execute(
+                "SELECT id FROM items WHERE type = ? AND LOWER(TRIM(title)) = LOWER(TRIM(?))",
+                (item_type, title),
+            ).fetchone()
+
+        if existing:
+            skipped += 1
+            continue
+
+        try:
+            db.execute(
+                "INSERT INTO items (type, external_id, title, genre_tags, metadata) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (item_type, ext_id, title, item.get("genre_tags", ""), item.get("metadata", "{}")),
+            )
+            inserted += 1
+        except Exception:
+            skipped += 1
+
     db.commit()
+    return inserted, skipped

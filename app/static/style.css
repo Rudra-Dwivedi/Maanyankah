@@ -1438,6 +1438,21 @@ p { color: var(--text-muted); margin: 0 0 1em; }
   background: var(--accent-music);
   color: var(--bg-ink);
 }
+.btn-action-info {
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius);
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+  transition: all 0.15s ease;
+}
+.btn-action-info:hover {
+  background: #6366f1;
+  color: #ffffff;
+}
 
 /* ---------- User Detail Profile Page ---------- */
 .back-link {

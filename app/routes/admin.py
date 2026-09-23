@@ -1,5 +1,6 @@
 import json
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, g, abort
+import sqlite3
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, g, abort, jsonify
 from werkzeug.security import check_password_hash
 
 from app.db import get_db
@@ -578,6 +579,37 @@ def items():
     )
 
 
+@bp.route("/items/check-duplicate")
+@admin_required
+def check_duplicate():
+    item_type = request.args.get("type", "").strip()
+    title = request.args.get("title", "").strip()
+
+    if not title or not item_type:
+        return jsonify({"exists": False})
+
+    db = get_db()
+    row = db.execute(
+        """
+        SELECT i.id, i.title, i.type, ROUND(AVG(r.rating), 1) as avg_rating
+        FROM items i
+        LEFT JOIN user_preferences r ON i.id = r.item_id
+        WHERE i.type = ? AND LOWER(TRIM(i.title)) = LOWER(TRIM(?))
+        GROUP BY i.id
+        """,
+        (item_type, title),
+    ).fetchone()
+
+    if row:
+        return jsonify({
+            "exists": True,
+            "id": row["id"],
+            "title": row["title"],
+            "avg_rating": row["avg_rating"] or 0,
+        })
+    return jsonify({"exists": False})
+
+
 @bp.route("/items/create", methods=["POST"])
 @admin_required
 def create_item():
@@ -588,6 +620,18 @@ def create_item():
 
     if not title or item_type not in ("movie", "song", "team"):
         flash("Title and a valid item type (movie, song, team) are required.")
+        return redirect(url_for("admin.items"))
+
+    db = get_db()
+
+    # Proactive normalized duplicate check
+    existing = db.execute(
+        "SELECT id, title FROM items WHERE type = ? AND LOWER(TRIM(title)) = LOWER(TRIM(?))",
+        (item_type, title),
+    ).fetchone()
+
+    if existing:
+        flash(f"A {item_type} titled '{existing['title']}' already exists in the catalog (ID #{existing['id']}). Duplicate prevented.")
         return redirect(url_for("admin.items"))
 
     auto_fetched = False
@@ -601,17 +645,94 @@ def create_item():
     if image_url:
         metadata["image_url"] = image_url
 
-    db = get_db()
-    db.execute(
-        "INSERT INTO items (type, title, genre_tags, metadata) VALUES (?, ?, ?, ?)",
-        (item_type, title, genre_tags, json.dumps(metadata)),
-    )
-    db.commit()
+    try:
+        db.execute(
+            "INSERT INTO items (type, title, genre_tags, metadata) VALUES (?, ?, ?, ?)",
+            (item_type, title, genre_tags, json.dumps(metadata)),
+        )
+        db.commit()
+    except sqlite3.IntegrityError:
+        flash(f"Database constraint prevented inserting '{title}' as a duplicate {item_type}.")
+        return redirect(url_for("admin.items"))
 
     if auto_fetched:
         flash(f"Added '{title}' ({item_type}) with automatically resolved image!")
     else:
         flash(f"Successfully added '{title}' ({item_type}) to the catalog.")
+    return redirect(url_for("admin.items"))
+
+
+@bp.route("/items/deduplicate", methods=["POST"])
+@admin_required
+def deduplicate_catalog():
+    db = get_db()
+    # Find all clusters with duplicates (same type and lower(trim(title)))
+    dup_clusters = db.execute(
+        """
+        SELECT type, LOWER(TRIM(title)) as norm_title, COUNT(*) as cnt
+        FROM items
+        GROUP BY type, LOWER(TRIM(title))
+        HAVING COUNT(*) > 1
+        """
+    ).fetchall()
+
+    if not dup_clusters:
+        flash("Catalog is already clean! No duplicate items found.")
+        return redirect(url_for("admin.items"))
+
+    merged_clusters_count = len(dup_clusters)
+    removed_duplicates_count = 0
+
+    for cluster in dup_clusters:
+        items_in_cluster = db.execute(
+            """
+            SELECT id, metadata, external_id
+            FROM items
+            WHERE type = ? AND LOWER(TRIM(title)) = ?
+            ORDER BY id ASC
+            """,
+            (cluster["type"], cluster["norm_title"]),
+        ).fetchall()
+
+        canonical_id = items_in_cluster[0]["id"]
+        duplicate_ids = [row["id"] for row in items_in_cluster[1:]]
+
+        for dup_id in duplicate_ids:
+            # 1. Consolidate user_preferences
+            # Delete conflicting ratings on duplicate if user already rated canonical
+            db.execute(
+                """
+                DELETE FROM user_preferences
+                WHERE item_id = ? AND user_id IN (
+                    SELECT user_id FROM user_preferences WHERE item_id = ?
+                )
+                """,
+                (dup_id, canonical_id),
+            )
+            # Reassign non-conflicting ratings
+            db.execute("UPDATE user_preferences SET item_id = ? WHERE item_id = ?", (canonical_id, dup_id))
+
+            # 2. Consolidate collection_items
+            db.execute(
+                """
+                DELETE FROM collection_items
+                WHERE item_id = ? AND collection_id IN (
+                    SELECT collection_id FROM collection_items WHERE item_id = ?
+                )
+                """,
+                (dup_id, canonical_id),
+            )
+            db.execute("UPDATE collection_items SET item_id = ? WHERE item_id = ?", (canonical_id, dup_id))
+
+            # 3. Consolidate posts
+            db.execute("UPDATE posts SET item_id = ? WHERE item_id = ?", (canonical_id, dup_id))
+
+            # 4. Remove duplicate item
+            db.execute("DELETE FROM items WHERE id = ?", (dup_id,))
+            removed_duplicates_count += 1
+
+    db.commit()
+    flash(f"Successfully cleaned catalog! Consolidated {removed_duplicates_count} duplicate item(s) across {merged_clusters_count} cluster(s).")
     return redirect(url_for("admin.items"))
 
 

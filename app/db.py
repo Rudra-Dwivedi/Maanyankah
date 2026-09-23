@@ -74,14 +74,19 @@ def init_db(app):
         if "is_pinned" not in post_columns:
             cursor.execute("ALTER TABLE posts ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0")
 
-        # Idempotently seed catalog items
+        # Migration: ensure unique indexes on items table to prevent duplicate catalog entries
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_type_title ON items(type, LOWER(TRIM(title)))")
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_type_extid ON items(type, external_id) WHERE external_id IS NOT NULL AND external_id != ''")
+
+        # Idempotently seed catalog items with strict normalized duplicate check
         for item_type, title, tags, img_url in DEFAULT_CATALOG_ITEMS:
-            cursor.execute("SELECT id FROM items WHERE title = ?", (title,))
+            cursor.execute("SELECT id FROM items WHERE type = ? AND LOWER(TRIM(title)) = LOWER(TRIM(?))", (item_type, title))
             if not cursor.fetchone():
                 cursor.execute(
                     "INSERT INTO items (type, title, genre_tags, metadata) VALUES (?, ?, ?, ?)",
                     (item_type, title, tags, json.dumps({"image_url": img_url})),
                 )
+
 
         # Seed initial curated collections if collections table is empty
         cursor.execute("SELECT COUNT(*) FROM collections")

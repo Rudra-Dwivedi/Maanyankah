@@ -8,7 +8,7 @@ import json
 import requests
 from flask import current_app
 
-from app.services.settings_store import get_setting
+from app.services.settings_store import get_setting, set_setting
 
 BASE_URL = "https://api.themoviedb.org/3"
 
@@ -36,10 +36,48 @@ TMDB_GENRES = {
 }
 
 
-def fetch_popular_movies(page=1, pages=1):
+class TMDBFetchResult(list):
+    """List of movie items with attached pagination metadata."""
+    def __init__(self, items, start_page, end_page):
+        super().__init__(items)
+        self.start_page = start_page
+        self.end_page = end_page
+        self.pages_fetched = max(0, end_page - start_page + 1) if end_page >= start_page else 0
+
+
+def get_tmdb_page_cursor():
+    """Return the last TMDB page fetched (stored in settings table), default 0."""
+    try:
+        val = get_setting("TMDB_LAST_PAGE", fallback="0")
+        if val and str(val).strip().isdigit():
+            return int(str(val).strip())
+        return 0
+    except Exception:
+        return 0
+
+
+def advance_tmdb_page_cursor(page):
+    """Set the last TMDB page fetched."""
+    try:
+        val = max(1, int(page))
+        set_setting("TMDB_LAST_PAGE", str(val))
+    except Exception as e:
+        current_app.logger.warning(f"Could not advance TMDB page cursor: {e}")
+
+
+def reset_tmdb_page_cursor():
+    """Reset the TMDB page cursor back to 0 (so next fetch starts at page 1)."""
+    try:
+        set_setting("TMDB_LAST_PAGE", "0")
+    except Exception as e:
+        current_app.logger.warning(f"Could not reset TMDB page cursor: {e}")
+
+
+def fetch_popular_movies(page=None, pages=1, auto_advance=False):
     """Fetch popular movies from TMDB across one or more pages.
-    Each page contains 20 movies. E.g. pages=3 fetches 60 movies.
-    Returns a list of dicts ready to insert into the `items` table."""
+    If `page` is None, automatically starts from the next unseen page (cursor + 1).
+    Each page contains 20 movies. E.g. pages=3 fetches up to 60 movies.
+    Returns a TMDBFetchResult (inherits list) of dicts ready to insert into `items`."""
     api_key = get_setting("TMDB_API_KEY")
     if not api_key:
         raise RuntimeError(
@@ -47,11 +85,18 @@ def fetch_popular_movies(page=1, pages=1):
         )
 
     # Determine range of pages to fetch
-    start_page = page
-    end_page = start_page + max(1, pages) - 1
+    if page is None:
+        start_page = get_tmdb_page_cursor() + 1
+    else:
+        start_page = max(1, int(page))
+
+    num_pages = max(1, int(pages))
+    end_page = start_page + num_pages - 1
 
     items = []
     seen_ids = set()
+    seen_titles = set()
+    last_successful_page = start_page - 1
 
     for p in range(start_page, end_page + 1):
         try:
@@ -72,11 +117,20 @@ def fetch_popular_movies(page=1, pages=1):
         if not results:
             break
 
+        last_successful_page = p
+
         for movie in results:
-            m_id = str(movie.get("id"))
-            if m_id in seen_ids:
+            m_id = str(movie.get("id")) if movie.get("id") else ""
+            raw_title = (movie.get("title") or "").strip()
+            norm_title = raw_title.lower()
+
+            if (m_id and m_id in seen_ids) or (norm_title and norm_title in seen_titles):
                 continue
-            seen_ids.add(m_id)
+
+            if m_id:
+                seen_ids.add(m_id)
+            if norm_title:
+                seen_titles.add(norm_title)
 
             # Map TMDB genre IDs to human-readable names
             genre_ids = movie.get("genre_ids", [])
@@ -86,8 +140,8 @@ def fetch_popular_movies(page=1, pages=1):
             items.append(
                 {
                     "type": "movie",
-                    "external_id": m_id,
-                    "title": movie.get("title", "").strip(),
+                    "external_id": m_id or None,
+                    "title": raw_title,
                     "genre_tags": genre_tags,
                     "metadata": json.dumps(
                         {
@@ -100,7 +154,11 @@ def fetch_popular_movies(page=1, pages=1):
                 }
             )
 
-    return items
+    actual_end_page = max(start_page, last_successful_page)
+    if auto_advance and actual_end_page >= start_page:
+        advance_tmdb_page_cursor(actual_end_page)
+
+    return TMDBFetchResult(items, start_page, actual_end_page)
 
 
 def save_items(db, items):

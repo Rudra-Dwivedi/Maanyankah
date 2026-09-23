@@ -42,37 +42,106 @@
     <button type="submit" class="btn">Save keys</button>
   </form>
 
-  <h2 class="section-title-sm">Load real data</h2>
-  <p class="page-sub">Once your keys are saved, pull sample content straight into the app.</p>
+  <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-top: 2rem;">
+    <div>
+      <h2 class="section-title-sm" style="margin-bottom: 0.2rem;">Load real data</h2>
+      <p class="page-sub">Pull sample or real-world movies, music, and teams directly into your catalog.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center; font-size: 0.82rem; color: var(--text-muted);">
+      <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: var(--accent-movies); padding: 0.25rem 0.6rem; border-radius: 999px; border: 1px solid rgba(239, 68, 68, 0.25);">🎬 {{ movie_count }} Movies</span>
+      <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: var(--accent-music); padding: 0.25rem 0.6rem; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.25);">🎵 {{ song_count }} Songs</span>
+      <span class="badge" style="background: rgba(59, 130, 246, 0.12); color: var(--accent-sports); padding: 0.25rem 0.6rem; border-radius: 999px; border: 1px solid rgba(59, 130, 246, 0.25);">⚽ {{ team_count }} Teams</span>
+    </div>
+  </div>
 
   <div class="fetch-grid">
-    <form method="post" action="{{ url_for('settings.fetch_movies') }}" class="fetch-card fetch-card-movies">
-      <h3>Popular movies</h3>
-      <p>Pulls the current popular list from TMDB with genre tags and rich overviews.</p>
-      <div style="margin-bottom: 0.8rem;">
-        <label style="font-size: 0.82rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Number of movies to pull:</label>
-        <select name="pages" class="form-control" style="width: 100%; padding: 0.45rem 0.6rem; border-radius: var(--radius); background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-soft);">
-          <option value="1">20 movies (1 page)</option>
-          <option value="2">40 movies (2 pages)</option>
-          <option value="3" selected>60 movies (3 pages)</option>
-          <option value="5">100 movies (5 pages)</option>
-        </select>
+    <div class="fetch-card fetch-card-movies">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+        <div>
+          <h3>Popular movies</h3>
+          <span style="display: inline-block; margin-top: 3px; font-size: 0.74rem; color: var(--accent-movies); font-weight: 600;">Continuous Multi-Page TMDB</span>
+        </div>
+        <form method="post" action="{{ url_for('settings.reset_movies_cursor') }}" onsubmit="return confirm('Reset TMDB page cursor back to Page 1? Next fetch will start from page 1.');" style="margin: 0;">
+          <button type="submit" class="btn-ghost btn-small" style="font-size: 0.72rem; padding: 0.2rem 0.45rem; border-radius: 4px;" title="Reset fetch cursor back to page 1">↺ Reset to P1</button>
+        </form>
       </div>
-      <button type="submit" class="btn-ghost">Fetch movies</button>
-    </form>
+
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0;">
+        Pulls current popular movies from TMDB with genre tags, ratings, and synopses.
+      </p>
+
+      <!-- Live Cursor Status Box -->
+      <div style="background: var(--bg-card-hover, rgba(255,255,255,0.03)); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 0.5rem 0.7rem; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="color: var(--text-muted);">Fetched up to:</span>
+          <strong>{% if tmdb_last_page > 0 %}TMDB Page {{ tmdb_last_page }}{% else %}None (Starts at Page 1){% endif %}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="color: var(--text-muted);">Next auto fetch:</span>
+          <span style="color: #10b981; font-weight: 600;">Page {{ tmdb_next_page }}</span>
+        </div>
+      </div>
+
+      <form method="post" action="{{ url_for('settings.fetch_movies') }}" style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 0.2rem;">
+        <!-- Batch Size -->
+        <div>
+          <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Number of movies to pull:</label>
+          <select name="pages" id="tmdb-pages-select" class="form-control" style="width: 100%; padding: 0.45rem 0.6rem; border-radius: var(--radius); background: var(--bg-ink); color: var(--text-primary); border: 1px solid var(--border);" onchange="document.getElementById('custom-pages-wrapper').style.display = this.value === 'custom' ? 'block' : 'none';">
+            <option value="1">20 movies (1 page)</option>
+            <option value="2">40 movies (2 pages)</option>
+            <option value="3" selected>60 movies (3 pages, recommended)</option>
+            <option value="5">100 movies (5 pages)</option>
+            <option value="10">200 movies (10 pages)</option>
+            <option value="25">500 movies (25 pages)</option>
+            <option value="custom">Custom number of pages...</option>
+          </select>
+        </div>
+
+        <!-- Custom Pages Input (Hidden unless Custom is picked) -->
+        <div id="custom-pages-wrapper" style="display: none;">
+          <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Custom pages count (1–50 pages = up to 1,000 movies):</label>
+          <input type="number" name="custom_pages" min="1" max="50" value="3" placeholder="Enter number of pages (1–50)" style="width: 100%;">
+        </div>
+
+        <!-- Start Page Option -->
+        <div>
+          <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Starting page:</label>
+          <div style="display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.8rem;">
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; margin: 0;">
+              <input type="radio" name="fetch_mode" value="auto" checked onchange="document.getElementById('custom-start-wrapper').style.display = 'none';">
+              <span>Next unseen page (Page {{ tmdb_next_page }})</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; margin: 0;">
+              <input type="radio" name="fetch_mode" value="custom" onchange="document.getElementById('custom-start-wrapper').style.display = 'block';">
+              <span>Specify starting page</span>
+            </label>
+          </div>
+          <div id="custom-start-wrapper" style="display: none; margin-top: 0.4rem;">
+            <input type="number" name="custom_start_page" min="1" max="500" value="{{ tmdb_next_page }}" placeholder="Enter start page (1–500)" style="width: 100%;">
+          </div>
+        </div>
+
+        <button type="submit" class="btn" style="width: 100%; margin-top: 0.2rem; background: var(--accent-movies); color: white; border: none; font-weight: 600; cursor: pointer;">
+          Fetch Movies
+        </button>
+        <span style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.3;">
+          🛡️ Successive fetches pull brand new pages automatically. Duplicates are safely skipped and will never create duplicate catalog entries.
+        </span>
+      </form>
+    </div>
 
     <form method="post" action="{{ url_for('settings.fetch_music') }}" class="fetch-card fetch-card-music">
-      <h3>Search tracks</h3>
+      <h3>Search tracks (Spotify)</h3>
       <p>Search by artist, song, or genre — pulls matching tracks straight from Spotify.</p>
       <input type="text" name="query" placeholder="e.g. Arijit Singh, lofi chill, Taylor Swift">
-      <button type="submit" class="btn-ghost">Fetch tracks</button>
+      <button type="submit" class="btn-ghost" style="margin-top: auto;">Fetch tracks</button>
     </form>
 
     <form method="post" action="{{ url_for('settings.fetch_sports') }}" class="fetch-card fetch-card-sports">
-      <h3>Teams by league</h3>
+      <h3>Teams by league (Sports)</h3>
       <p>Enter a league name to pull its teams.</p>
-      <input type="text" name="league" placeholder="e.g. English Premier League">
-      <button type="submit" class="btn-ghost">Fetch teams</button>
+      <input type="text" name="league" placeholder="e.g. English Premier League, NBA, IPL">
+      <button type="submit" class="btn-ghost" style="margin-top: auto;">Fetch teams</button>
     </form>
   </div>
 

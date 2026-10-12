@@ -5,7 +5,7 @@ from app.db import get_db
 from app.auth_utils import login_required
 from app.services.item_media import with_image_urls, resolve_image_url
 from app.services.sentiment import analyze, label
-from app.services.movie_agent import MOVIE_KNOWLEDGE_BASE, SONG_KNOWLEDGE_BASE
+from app.services.movie_agent import MOVIE_KNOWLEDGE_BASE, SONG_KNOWLEDGE_BASE, resolve_movie_trailer
 
 bp = Blueprint("items", __name__, url_prefix="/items")
 
@@ -366,6 +366,7 @@ def detail(item_id):
         (item_dict["type"], item_id),
     ).fetchall()
     related_items = with_image_urls(related_rows)
+    trailer_info = resolve_movie_trailer(item_dict, db=db) if item_dict["type"] == "movie" else None
 
     return render_template(
         "item_detail.html",
@@ -376,7 +377,26 @@ def detail(item_id):
         user_collections=user_collections,
         comments=comments,
         related_items=related_items,
+        trailer=trailer_info,
     )
+
+
+@bp.route("/<int:item_id>/trailer")
+def item_trailer(item_id):
+    """JSON API endpoint returning trailer embed data for a movie item."""
+    db = get_db()
+    item = db.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    if item is None or item["type"] != "movie":
+        return jsonify({"success": False, "error": "Movie not found"}), 404
+
+    item_dict = dict(item)
+    trailer_info = resolve_movie_trailer(item_dict, db=db)
+    return jsonify({
+        "success": True,
+        "item_id": item["id"],
+        "title": item["title"],
+        "trailer": trailer_info,
+    })
 
 
 @bp.route("/<int:item_id>/quick-view")
@@ -390,6 +410,7 @@ def quick_view(item_id):
     item_dict = dict(item)
     item_dict["image_url"] = resolve_image_url(item_dict)
     details = get_item_metadata_and_description(item_dict)
+    trailer_info = resolve_movie_trailer(item_dict, db=db) if item_dict["type"] == "movie" else None
 
     rating_stats = db.execute(
         """
@@ -450,6 +471,7 @@ def quick_view(item_id):
         "avg_rating": rating_stats["avg_rating"] if rating_stats else 0,
         "rating_count": rating_stats["rating_count"] if rating_stats else 0,
         "user_rating": user_rating,
+        "trailer": trailer_info,
         "comments": comments,
         "is_logged_in": g.user is not None,
     })

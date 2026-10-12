@@ -216,6 +216,29 @@
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function renderDirectAnswerHtml(data) {
+    let trailerEmbed = '';
+    if (data.trailer_key) {
+      trailerEmbed = `
+        <div class="float-direct-trailer" style="margin-top: 0.6rem;">
+          <iframe src="https://www.youtube-nocookie.com/embed/${escapeHtml(data.trailer_key)}?autoplay=0&rel=0" allowfullscreen style="width: 100%; aspect-ratio: 16/9; border: none; border-radius: 8px;"></iframe>
+        </div>
+      `;
+    }
+    return `
+      <div class="float-direct-card">
+        <div class="float-direct-top" style="display: flex; gap: 0.8rem; align-items: flex-start;">
+          ${data.image_url ? `<img src="${escapeHtml(data.image_url)}" alt="${escapeHtml(data.item_title)}" style="width: 48px; height: 68px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">` : ''}
+          <div class="float-direct-main">
+            <span class="float-intent-badge" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--accent, #4fd1c5);">${escapeHtml(data.intent || 'Answer')}</span>
+            <div class="float-direct-answer" style="font-size: 0.92rem; line-height: 1.4; margin-top: 0.2rem;">${data.answer}</div>
+          </div>
+        </div>
+        ${trailerEmbed}
+      </div>
+    `;
+  }
+
   function renderMovieDetailHtml(m) {
     const s = m.stats;
     let breakdownRows = '';
@@ -251,6 +274,7 @@
       : `<div class="float-thumb-placeholder">🎬</div>`;
 
     const genresHtml = (m.genres || []).map(g => `<span class="float-genre-tag">${escapeHtml(g)}</span>`).join('');
+    const synopsisToShow = m.short_synopsis || m.synopsis;
 
     return `
       <div class="float-movie-card">
@@ -266,20 +290,28 @@
           </div>
         </div>
 
-        <p class="float-synopsis">${escapeHtml(m.synopsis)}</p>
+        <p class="float-synopsis" style="margin-top: 0.6rem; font-size: 0.88rem; line-height: 1.4;">${escapeHtml(synopsisToShow)}</p>
 
-        <div class="float-analytics">
-          <div class="float-sentiment-summary">${escapeHtml(s.sentiment_summary)}</div>
-          <div class="float-breakdown-list">
-            ${breakdownRows}
+        <div class="float-card-actions" style="margin-top: 0.6rem; display: flex; gap: 0.4rem; flex-wrap: wrap;">
+          ${m.trailer_key ? `<button type="button" class="float-action-btn" onclick="const f=this.parentElement.nextElementSibling; if(f.style.display==='none'){f.style.display='block';}else{f.style.display='none';}">▶ Trailer</button>` : ''}
+          <button type="button" class="float-action-btn" data-query="Recommend movies similar to ${escapeHtml(m.title)}">🎬 Similar</button>
+        </div>
+        ${m.trailer_key ? `
+          <div class="float-inline-trailer" style="display: none; margin-top: 0.6rem;">
+            <iframe src="https://www.youtube-nocookie.com/embed/${escapeHtml(m.trailer_key)}?autoplay=1&rel=0" allowfullscreen style="width: 100%; aspect-ratio: 16/9; border: none; border-radius: 8px;"></iframe>
           </div>
-          ${quotesSnippet}
-        </div>
+        ` : ''}
 
-        <div class="float-card-actions">
-          <button type="button" class="float-action-btn" data-query="Recommend movies similar to ${escapeHtml(m.title)}">🎬 Similar Movies</button>
-          <button type="button" class="float-action-btn" data-query="Why did people rate ${escapeHtml(m.title)} high?">⭐ Consensus</button>
-        </div>
+        <details class="float-details-accordion" style="margin-top: 0.6rem;">
+          <summary class="float-details-summary" style="cursor: pointer; font-size: 0.8rem; color: #a0aec0; padding: 0.3rem 0;">▾ Star Distribution & Quotes</summary>
+          <div class="float-analytics" style="margin-top: 0.4rem;">
+            <div class="float-sentiment-summary">${escapeHtml(s.sentiment_summary)}</div>
+            <div class="float-breakdown-list">
+              ${breakdownRows}
+            </div>
+            ${quotesSnippet}
+          </div>
+        </details>
       </div>
     `;
   }
@@ -309,7 +341,9 @@
 
   function appendAgentBubble(data) {
     let bodyHtml = '';
-    if (data.type === 'movie_detail') {
+    if (data.type === 'direct_answer') {
+      bodyHtml = renderDirectAnswerHtml(data);
+    } else if (data.type === 'movie_detail') {
       bodyHtml = renderMovieDetailHtml(data.movie);
     } else if (data.type === 'ranking' || data.type === 'recommendations') {
       bodyHtml = renderMiniGridHtml(data.title, data.message, data.movies || []);

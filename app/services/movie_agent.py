@@ -10,6 +10,7 @@ both MOVIES and SONGS in the Maanyankah catalog.
 import json
 import re
 import os
+import urllib.parse
 from flask import g
 from app.db import get_db
 from app.services.item_media import resolve_image_url
@@ -41,6 +42,7 @@ MOVIE_KNOWLEDGE_BASE = {
         ),
         "why_watch": "A rare modern sci-fi masterwork that unites labyrinthine intellectual storytelling with visceral blockbuster spectacle and emotional resonance.",
         "verdict": "Won 4 Academy Awards (Cinematography, Sound Editing, Sound Mixing, Visual Effects) and stands as one of the 21st century's defining cinema achievements.",
+        "trailer_key": "YoHD9XEInc0",
     },
     "the dark knight": {
         "director": "Christopher Nolan",
@@ -62,6 +64,7 @@ MOVIE_KNOWLEDGE_BASE = {
         ),
         "why_watch": "Elevated the comic-book film into a profound, Shakespearean crime drama that forever reshaped modern cinema's approach to psychological villains.",
         "verdict": "Recipient of 2 Academy Awards; consistently ranked among the greatest motion pictures ever produced in world cinema history.",
+        "trailer_key": "EXeTwQWrcwY",
     },
     "interstellar": {
         "director": "Christopher Nolan",
@@ -84,6 +87,7 @@ MOVIE_KNOWLEDGE_BASE = {
         ),
         "why_watch": "A staggering cinematic journey that combines mind-expanding astrophysics with one of the most tear-inducing father-daughter relationships ever committed to film.",
         "verdict": "Won the Academy Award for Best Visual Effects; celebrated globally as a modern philosophical space odyssey akin to 2001: A Space Odyssey.",
+        "trailer_key": "zSWdZVtXT7E",
     },
     "parasite": {
         "director": "Bong Joon-ho",
@@ -105,6 +109,7 @@ MOVIE_KNOWLEDGE_BASE = {
         ),
         "why_watch": "A thrilling roller coaster with brilliant visual pacing, shocking revelations, and a universal message that resonated with audiences across the globe.",
         "verdict": "Historic 4-time Oscar winner (including Best Picture, Best Director, and Best Original Screenplay); the first non-English-language Best Picture winner in Oscar history.",
+        "trailer_key": "5xH0R_uie1U",
     },
     "la la land": {
         "director": "Damien Chazelle",
@@ -125,6 +130,7 @@ MOVIE_KNOWLEDGE_BASE = {
         ),
         "why_watch": "An intoxicating, visually breathtaking homage to classic MGM and Jacques Demy musicals that grounds its spectacle in genuine modern human heartbreak.",
         "verdict": "Won 6 Academy Awards, including Best Director (making Damien Chazelle the youngest winner at age 32) and Best Actress for Emma Stone.",
+        "trailer_key": "0pdqf4P9MB8",
     },
     "the grand budapest hotel": {
         "director": "Wes Anderson",
@@ -145,6 +151,7 @@ MOVIE_KNOWLEDGE_BASE = {
         ),
         "why_watch": "Ralph Fiennes delivers one of the most delightful, witty, and charming performances in recent comedy history within an impeccably constructed visual world.",
         "verdict": "Won 4 Academy Awards (Costume Design, Makeup/Hairstyling, Production Design, Original Score); universally beloved for its literary warmth.",
+        "trailer_key": "1Fg5iWmQjwk",
     },
     "pulp fiction": {
         "director": "Quentin Tarantino",
@@ -165,6 +172,7 @@ MOVIE_KNOWLEDGE_BASE = {
         ),
         "why_watch": "A kinetic, effortlessly cool masterpiece that redefined the vocabulary of modern screenwriting and cinematic cool.",
         "verdict": "Won the prestigious Palme d'Or at Cannes and the Academy Award for Best Original Screenplay; inducted into the National Film Registry.",
+        "trailer_key": "s7EdQ4FqbhY",
     },
     "whiplash": {
         "director": "Damien Chazelle",
@@ -185,6 +193,7 @@ MOVIE_KNOWLEDGE_BASE = {
         ),
         "why_watch": "An electrifying psychological duel featuring career-best performances from both Miles Teller and an intimidating, Oscar-winning J.K. Simmons.",
         "verdict": "Won 3 Academy Awards (Best Supporting Actor, Best Film Editing, Best Sound Mixing); widely hailed as one of the greatest films ever made about musical dedication.",
+        "trailer_key": "7d_jQycdQGo",
     },
 }
 
@@ -515,13 +524,119 @@ def get_top_rated_items(db, item_type=None, limit=6):
 
 
 # ---------------------------------------------------------------------------
+# Helpers for Compact Summaries and Specific Intent Handling
+# ---------------------------------------------------------------------------
+def get_short_synopsis(synopsis, max_sentences=2):
+    """Extract a concise 1-2 sentence synopsis from full text."""
+    if not synopsis:
+        return ""
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', synopsis.strip()) if s.strip()]
+    if len(sentences) <= max_sentences:
+        return synopsis.strip()
+    return " ".join(sentences[:max_sentences])
+
+
+def detect_specific_intent(query_lower):
+    """Detect if query is asking for a specific attribute rather than an open breakdown."""
+    # 1. Director
+    if any(k in query_lower for k in ["who directed", "director of", "directed by", "who is the director", "who was the director"]):
+        return "director"
+    # 2. Cast / Actors
+    if any(k in query_lower for k in ["who stars", "cast of", "actors in", "who is in", "who acted in", "starring in", "who plays in", "lead actor", "lead actress"]):
+        return "cast"
+    # 3. Rating / Score / Reviews
+    if any(k in query_lower for k in ["what is the rating", "rating of", "how is it rated", "how is this rated", "community rating", "score of", "average rating", "how good is", "what are people saying"]):
+        return "rating"
+    # 4. Runtime / Duration
+    if any(k in query_lower for k in ["how long is", "runtime of", "runtime", "duration of", "length of", "how many minutes"]):
+        return "runtime"
+    # 5. Year / Release Date
+    if any(k in query_lower for k in ["when was", "release date", "release year", "what year", "when did", "year of"]):
+        return "year"
+    # 6. Trailer
+    if any(k in query_lower for k in ["trailer", "teaser", "watch trailer", "play trailer"]):
+        return "trailer"
+    # 7. Song Artist / Singer
+    if any(k in query_lower for k in ["who sings", "singer of", "artist of", "who wrote", "who sang"]):
+        return "artist"
+    # 8. Song Album
+    if any(k in query_lower for k in ["album of", "which album", "what album"]):
+        return "album"
+    return None
+
+
+def resolve_movie_trailer(item, db=None):
+    """
+    Resolve YouTube trailer key / embed URL for a movie item.
+    1. Checks item's metadata['trailer_key']
+    2. Checks MOVIE_KNOWLEDGE_BASE for seeded movies
+    3. Calls TMDB API via tmdb_client.get_movie_trailer_key if external_id exists
+    4. Caches found key back to database item metadata if db provided
+    5. Fallback search query embed
+    """
+    if not item or item.get("type") != "movie":
+        return None
+
+    meta = {}
+    raw_meta = item.get("metadata")
+    if raw_meta:
+        try:
+            meta = json.loads(raw_meta) if isinstance(raw_meta, str) else dict(raw_meta)
+        except Exception:
+            meta = {}
+
+    trailer_key = meta.get("trailer_key")
+    clean_title = (item.get("title") or "").strip().lower()
+
+    if not trailer_key:
+        kb = MOVIE_KNOWLEDGE_BASE.get(clean_title)
+        if not kb:
+            for k, v in MOVIE_KNOWLEDGE_BASE.items():
+                if k in clean_title or clean_title in k:
+                    kb = v
+                    break
+        if kb and kb.get("trailer_key"):
+            trailer_key = kb["trailer_key"]
+
+    if not trailer_key and item.get("external_id"):
+        try:
+            from app.services.tmdb_client import get_movie_trailer_key
+            trailer_key = get_movie_trailer_key(item["external_id"])
+            if trailer_key and db and item.get("id"):
+                meta["trailer_key"] = trailer_key
+                db.execute("UPDATE items SET metadata = ? WHERE id = ?", (json.dumps(meta), item["id"]))
+                db.commit()
+        except Exception:
+            pass
+
+    title_str = item.get("title") or "Movie"
+    if trailer_key:
+        embed_url = f"https://www.youtube-nocookie.com/embed/{trailer_key}?autoplay=1&rel=0"
+        watch_url = f"https://www.youtube.com/watch?v={trailer_key}"
+        is_direct = True
+    else:
+        safe_query = urllib.parse.quote_plus(f"{title_str} official trailer")
+        embed_url = f"https://www.youtube-nocookie.com/embed?listType=search&list={safe_query}&autoplay=1"
+        watch_url = f"https://www.youtube.com/results?search_query={safe_query}"
+        is_direct = False
+
+    return {
+        "trailer_key": trailer_key,
+        "embed_url": embed_url,
+        "watch_url": watch_url,
+        "is_direct": is_direct,
+        "title": title_str,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Main Agent Conversation Engine
 # ---------------------------------------------------------------------------
 def ask_movie_agent(query):
     """
     Main processing function for Chitrankah (चित्राङ्कः) AI Agent.
-    Handles natural language queries, movie & song detailed breakdowns,
-    community rating distributions, and recommendations.
+    Handles natural language queries, specific attribute questions,
+    compact movie & song breakdowns, community rating analytics, and recommendations.
     """
     db = get_db()
     clean_q = query.strip()
@@ -629,6 +744,44 @@ def ask_movie_agent(query):
                 why_listen = f"A standout track in the {', '.join(genres)} genre that showcases {artist}'s signature vocal style."
                 verdict = stats["sentiment_summary"]
 
+            # Check for specific attribute question on this song
+            specific_intent = detect_specific_intent(lower_q)
+            if specific_intent:
+                if specific_intent in ("artist", "director"):
+                    direct_answer = f"**{raw_track}** is performed by **{artist}**."
+                elif specific_intent == "album":
+                    direct_answer = f"**{raw_track}** is featured on the album **'{album}'** ({year})."
+                elif specific_intent == "rating":
+                    avg_str = f"★ {stats['avg_rating']}/5" if stats['rating_count'] > 0 else "No ratings yet"
+                    direct_answer = f"**{raw_track}** by {artist} currently holds a community score of **{avg_str}** across {stats['rating_count']} review(s). {stats['sentiment_summary']}"
+                elif specific_intent == "year":
+                    direct_answer = f"**{raw_track}** by {artist} was released in **{year}**."
+                else:
+                    direct_answer = f"**{raw_track}** by {artist} ({year}) has an average rating of **★ {stats['avg_rating']}/5**."
+
+                return {
+                    "type": "direct_answer",
+                    "intent": specific_intent,
+                    "item_title": raw_track,
+                    "item_type": "song",
+                    "item_id": primary_item["id"],
+                    "answer": direct_answer,
+                    "image_url": image_url,
+                    "details": {
+                        "artist": artist,
+                        "album": album,
+                        "year": year,
+                        "genres": genres,
+                        "avg_rating": stats["avg_rating"],
+                        "rating_count": stats["rating_count"],
+                    },
+                    "suggestions": [
+                        f"Tell me about {raw_track}",
+                        "What are the highest rated songs on Maanyankah?",
+                        f"Recommend music like {raw_track}"
+                    ]
+                }
+
             song_data = {
                 "id": primary_item["id"],
                 "title": raw_track,
@@ -695,6 +848,55 @@ def ask_movie_agent(query):
                 why_watch = f"An engaging cinematic experience for fans of {', '.join(genres)}."
                 verdict = stats["sentiment_summary"]
 
+            trailer_info = resolve_movie_trailer(dict(primary_item), db=db)
+            trailer_key = trailer_info.get("trailer_key") if trailer_info else None
+
+            # Check for specific attribute question on this movie
+            specific_intent = detect_specific_intent(lower_q)
+            if specific_intent:
+                if specific_intent == "director":
+                    direct_answer = f"**{item_title}** ({year}) was directed by **{director}**."
+                elif specific_intent == "cast":
+                    direct_answer = f"**{item_title}** stars **{cast}**."
+                elif specific_intent == "rating":
+                    avg_str = f"★ {stats['avg_rating']}/5" if stats['rating_count'] > 0 else "No ratings yet"
+                    direct_answer = f"**{item_title}** currently holds a community score of **{avg_str}** across {stats['rating_count']} review(s). {stats['sentiment_summary']}"
+                elif specific_intent == "runtime":
+                    direct_answer = f"The runtime of **{item_title}** is **{runtime}**."
+                elif specific_intent == "year":
+                    direct_answer = f"**{item_title}** was released in **{year}**."
+                elif specific_intent == "trailer":
+                    direct_answer = f"Here is the official trailer for **{item_title}** ({year}), directed by {director}:"
+                else:
+                    direct_answer = f"**{item_title}** ({year}), directed by {director}, has a community rating of **★ {stats['avg_rating']}/5**."
+
+                return {
+                    "type": "direct_answer",
+                    "intent": specific_intent,
+                    "item_title": item_title,
+                    "item_type": "movie",
+                    "item_id": primary_item["id"],
+                    "answer": direct_answer,
+                    "trailer_key": trailer_key,
+                    "trailer": trailer_info,
+                    "image_url": image_url,
+                    "details": {
+                        "director": director,
+                        "cast": cast,
+                        "year": year,
+                        "runtime": runtime,
+                        "genres": genres,
+                        "avg_rating": stats["avg_rating"],
+                        "rating_count": stats["rating_count"],
+                        "trailer_key": trailer_key,
+                    },
+                    "suggestions": [
+                        f"Tell me about {item_title}",
+                        f"What is the rating of {item_title}?",
+                        "What are the top rated movies?"
+                    ]
+                }
+
             movie_data = {
                 "id": primary_item["id"],
                 "title": item_title,
@@ -704,6 +906,9 @@ def ask_movie_agent(query):
                 "runtime": runtime,
                 "genres": genres,
                 "synopsis": synopsis,
+                "short_synopsis": get_short_synopsis(synopsis, 2),
+                "trailer_key": trailer_key,
+                "trailer": trailer_info,
                 "themes": themes,
                 "cinematic_craft": cinematic_craft,
                 "why_watch": why_watch,
@@ -715,7 +920,7 @@ def ask_movie_agent(query):
             return {
                 "type": "movie_detail",
                 "movie": movie_data,
-                "message": f"Here is the comprehensive cinematic analysis for **{item_title}**:",
+                "message": f"Here is the cinematic snapshot and community analysis for **{item_title}**:",
                 "suggestions": [
                     f"What is the average rating of {item_title}?",
                     "What are the top rated movies?",

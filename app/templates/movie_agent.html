@@ -487,6 +487,31 @@
       if (loader) loader.remove();
     }
 
+    function renderDirectAnswer(data) {
+      let trailerHtml = '';
+      if (data.trailer_key) {
+        trailerHtml = `
+          <div class="direct-trailer-container" style="margin-top: 1rem;">
+            <div class="trailer-player-container">
+              <iframe src="https://www.youtube-nocookie.com/embed/${escapeHtml(data.trailer_key)}?autoplay=0&rel=0" allowfullscreen title="${escapeHtml(data.item_title)} Trailer"></iframe>
+            </div>
+          </div>
+        `;
+      }
+      return `
+        <div class="direct-answer-cockpit-card">
+          <div class="direct-answer-header">
+            ${data.image_url ? `<img src="${escapeHtml(data.image_url)}" alt="${escapeHtml(data.item_title)}" class="direct-answer-thumb">` : ''}
+            <div class="direct-answer-content">
+              <span class="direct-intent-pill">${escapeHtml((data.intent || 'Quick Answer').toUpperCase())}</span>
+              <p class="direct-answer-text">${data.answer}</p>
+            </div>
+          </div>
+          ${trailerHtml}
+        </div>
+      `;
+    }
+
     function renderMovieDetail(m) {
       const s = m.stats;
       let breakdownHtml = '';
@@ -521,9 +546,26 @@
       }
 
       const genresHtml = (m.genres || []).map(g => `<span class="cockpit-genre-pill">${escapeHtml(g)}</span>`).join('');
+      const synopsisToShow = m.short_synopsis || m.synopsis;
+
+      let trailerSection = '';
+      if (m.trailer_key) {
+        trailerSection = `
+          <div class="compact-trailer-action-row" style="margin-top: 0.8rem; margin-bottom: 0.8rem;">
+            <button type="button" class="btn-compact-trailer" onclick="const p = this.nextElementSibling; if(p.style.display==='none'){p.style.display='block'; this.innerText='✕ Close Trailer';}else{p.style.display='none'; this.innerText='▶ Watch Official Trailer';}">
+              ▶ Watch Official Trailer
+            </button>
+            <div class="compact-trailer-player" style="display: none; margin-top: 0.8rem;">
+              <div class="trailer-player-container">
+                <iframe src="https://www.youtube-nocookie.com/embed/${escapeHtml(m.trailer_key)}?autoplay=1&rel=0" allowfullscreen title="${escapeHtml(m.title)} Trailer"></iframe>
+              </div>
+            </div>
+          </div>
+        `;
+      }
 
       return `
-        <div class="agent-detail-spotlight">
+        <div class="agent-detail-spotlight agent-compact-spotlight">
           <div class="spotlight-poster-box">
             ${m.image_url ? `<img src="${m.image_url}" alt="${escapeHtml(m.title)}" class="spotlight-poster-img">` : `<div class="spotlight-poster-empty">🎬</div>`}
           </div>
@@ -545,35 +587,55 @@
 
             <div class="spotlight-genres-row">${genresHtml}</div>
 
-            <div class="spotlight-section">
-              <h4 class="spotlight-section-title">📖 Narrative Premise & Story Arc</h4>
-              <p class="spotlight-synopsis-text">${escapeHtml(m.synopsis)}</p>
-              ${m.themes ? `<p class="spotlight-themes-text"><strong>Core Themes:</strong> ${escapeHtml(m.themes)}</p>` : ''}
+            <div class="spotlight-section compact-synopsis-section">
+              <p class="spotlight-synopsis-text">${escapeHtml(synopsisToShow)}</p>
             </div>
 
-            ${m.cinematic_craft ? `
-              <div class="spotlight-section">
-                <h4 class="spotlight-section-title">🎥 Cinematic Craft & Audio-Visual Direction</h4>
-                <p class="spotlight-craft-text">${escapeHtml(m.cinematic_craft)}</p>
-              </div>
-            ` : ''}
+            ${trailerSection}
 
-            ${m.why_watch ? `
-              <div class="spotlight-section">
-                <h4 class="spotlight-section-title">🌟 Why You Should Watch It</h4>
-                <p class="spotlight-why-text">${escapeHtml(m.why_watch)}</p>
-                ${m.verdict ? `<p class="spotlight-verdict-text">🏆 <strong>Legacy:</strong> ${escapeHtml(m.verdict)}</p>` : ''}
-              </div>
-            ` : ''}
+            <!-- Collapsible Deep Trivia & Star Breakdown -->
+            <details class="agent-compact-details">
+              <summary class="agent-details-toggle-btn">▾ Star Rating Breakdown & Full Cinematic Trivia</summary>
+              <div class="agent-collapsible-inner">
+                ${m.synopsis && m.synopsis !== synopsisToShow ? `
+                  <div class="spotlight-section">
+                    <h4 class="spotlight-section-title">📖 Full Narrative Premise</h4>
+                    <p class="spotlight-synopsis-text">${escapeHtml(m.synopsis)}</p>
+                  </div>
+                ` : ''}
 
-            <div class="spotlight-rating-analytics">
-              <div class="analytics-header-row">
-                <span class="analytics-title-text">📊 Community Ratings & Sentiment Consensus</span>
-                <span class="sentiment-consensus-pill">${escapeHtml(s.sentiment_summary)}</span>
+                ${m.themes ? `
+                  <div class="spotlight-section">
+                    <h4 class="spotlight-section-title">🎭 Core Themes</h4>
+                    <p class="spotlight-themes-text">${escapeHtml(m.themes)}</p>
+                  </div>
+                ` : ''}
+
+                ${m.cinematic_craft ? `
+                  <div class="spotlight-section">
+                    <h4 class="spotlight-section-title">🎥 Cinematic Craft & Audio-Visual Direction</h4>
+                    <p class="spotlight-craft-text">${escapeHtml(m.cinematic_craft)}</p>
+                  </div>
+                ` : ''}
+
+                ${m.why_watch ? `
+                  <div class="spotlight-section">
+                    <h4 class="spotlight-section-title">🌟 Why You Should Watch It</h4>
+                    <p class="spotlight-why-text">${escapeHtml(m.why_watch)}</p>
+                    ${m.verdict ? `<p class="spotlight-verdict-text">🏆 <strong>Legacy:</strong> ${escapeHtml(m.verdict)}</p>` : ''}
+                  </div>
+                ` : ''}
+
+                <div class="spotlight-rating-analytics">
+                  <div class="analytics-header-row">
+                    <span class="analytics-title-text">📊 Community Ratings & Sentiment Consensus</span>
+                    <span class="sentiment-consensus-pill">${escapeHtml(s.sentiment_summary)}</span>
+                  </div>
+                  <div class="star-distribution-bars">${breakdownHtml}</div>
+                  ${quotesHtml}
+                </div>
               </div>
-              <div class="star-distribution-bars">${breakdownHtml}</div>
-              ${quotesHtml}
-            </div>
+            </details>
           </div>
         </div>
       `;
@@ -698,7 +760,9 @@
 
     function appendAgentTurn(data) {
       let bodyHtml = '';
-      if (data.type === 'movie_detail') {
+      if (data.type === 'direct_answer') {
+        bodyHtml = renderDirectAnswer(data);
+      } else if (data.type === 'movie_detail') {
         bodyHtml = renderMovieDetail(data.movie);
       } else if (data.type === 'song_detail') {
         bodyHtml = renderSongDetail(data.song);

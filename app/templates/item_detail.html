@@ -18,12 +18,18 @@
   <!-- Hero Section -->
   <section class="item-detail-hero item-hero-{{ item.type }}">
     <div class="detail-poster-col">
-      <div class="detail-poster-wrap">
+      <div class="detail-poster-wrap {% if item.type == 'movie' and trailer %}detail-poster-clickable{% endif %}" {% if item.type == 'movie' and trailer %}onclick="document.getElementById('trailer-section')?.scrollIntoView({behavior: 'smooth'})" title="Click to view Official Trailer" style="cursor: pointer;"{% endif %}>
         {% if item.image_url %}
           <img src="{{ item.image_url }}" alt="{{ item.title }}" class="detail-poster-img">
         {% else %}
           <div class="detail-poster-placeholder">
             {% if item.type == 'movie' %}🎬{% elif item.type == 'song' %}🎵{% else %}🏆{% endif %}
+          </div>
+        {% endif %}
+        {% if item.type == 'movie' and trailer %}
+          <div class="poster-trailer-overlay">
+            <span class="poster-trailer-icon">▶</span>
+            <span class="poster-trailer-text">Watch Trailer</span>
           </div>
         {% endif %}
       </div>
@@ -75,7 +81,12 @@
 
       <!-- Action Buttons -->
       <div class="detail-actions-row">
-        {% if item.type in ('movie', 'song') %}
+        {% if item.type == 'movie' and trailer %}
+          <button type="button" class="btn btn-trailer-jump" onclick="document.getElementById('trailer-section')?.scrollIntoView({behavior: 'smooth'})">
+            ▶ Watch Trailer
+          </button>
+        {% endif %}
+        {% if item.type == 'song' %}
           <a href="{{ url_for('agent.index', q=item.title) }}" class="btn btn-ask-agent-lg" title="Ask चित्राङ्कः deep cultural intelligence">
             🤖 Ask चित्राङ्कः
           </a>
@@ -111,6 +122,28 @@
           {% endif %}
         </div>
       </section>
+
+      <!-- Official Trailer Section -->
+      {% if item.type == 'movie' and trailer %}
+        <section class="detail-card detail-trailer-section" id="trailer-section">
+          <div class="detail-trailer-header">
+            <h2 class="detail-card-heading">🎬 Official Trailer</h2>
+            {% if trailer.watch_url %}
+              <a href="{{ trailer.watch_url }}" target="_blank" rel="noopener noreferrer" class="btn-ghost btn-small">
+                Watch on YouTube ↗
+              </a>
+            {% endif %}
+          </div>
+          <div class="detail-trailer-wrap">
+            <iframe 
+              src="{{ trailer.embed_url }}" 
+              title="{{ item.title }} Official Trailer" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen>
+            </iframe>
+          </div>
+        </section>
+      {% endif %}
 
       <!-- Community Comments Section -->
       <section class="detail-card detail-comments-section" id="community-comments">

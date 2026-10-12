@@ -175,13 +175,7 @@
                 </div>
               {% endif %}
 
-              {% if item['type'] == 'movie' %}
-                <div class="item-agent-link-wrap">
-                  <a href="{{ url_for('agent.index', q=item['title']) }}" class="btn-ask-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ item.title|replace('\'', '\\\'') }}'); return false; }" title="चित्राङ्कः से पूछें (Ask चित्राङ्कः)">
-                    🤖 चित्राङ्कः
-                  </a>
-                </div>
-              {% endif %}
+
 
               {% if g.user %}
                 <form method="post" action="{{ url_for('items.rate', item_id=item['id']) }}" class="rate-form">

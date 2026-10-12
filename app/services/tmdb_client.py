@@ -73,6 +73,50 @@ def reset_tmdb_page_cursor():
         current_app.logger.warning(f"Could not reset TMDB page cursor: {e}")
 
 
+def get_movie_trailer_key(tmdb_id, api_key=None):
+    """Fetch YouTube trailer key for a movie from TMDB /movie/{id}/videos endpoint.
+    Returns the YouTube video key (e.g. 'zSWdZVtXT7E') or None if not found."""
+    if not tmdb_id:
+        return None
+    if not api_key:
+        api_key = get_setting("TMDB_API_KEY")
+    if not api_key:
+        return None
+
+    try:
+        resp = requests.get(
+            f"{BASE_URL}/movie/{tmdb_id}/videos",
+            params={"api_key": api_key},
+            timeout=8,
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        results = data.get("results", [])
+
+        # 1. Prefer Official Trailer on YouTube
+        for v in results:
+            if v.get("site") == "YouTube" and v.get("type") == "Trailer" and v.get("official"):
+                if v.get("key"):
+                    return v["key"]
+
+        # 2. Prefer any Trailer on YouTube
+        for v in results:
+            if v.get("site") == "YouTube" and v.get("type") == "Trailer":
+                if v.get("key"):
+                    return v["key"]
+
+        # 3. Any YouTube video (Teaser / Clip)
+        for v in results:
+            if v.get("site") == "YouTube" and v.get("key"):
+                return v["key"]
+    except Exception as e:
+        if current_app:
+            current_app.logger.debug(f"Could not fetch trailer for TMDB movie {tmdb_id}: {e}")
+        return None
+    return None
+
+
 def fetch_popular_movies(page=None, pages=1, auto_advance=False):
     """Fetch popular movies from TMDB across one or more pages.
     If `page` is None, automatically starts from the next unseen page (cursor + 1).

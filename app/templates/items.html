@@ -35,12 +35,16 @@
         {% for m in latest_movies %}
           <div class="flash-slide-item {{ 'active' if loop.first }}" data-slide-index="{{ loop.index0 }}" style="{{ 'display: flex;' if loop.first else 'display: none;' }}">
             <a href="{{ url_for('items.detail', item_id=m.id) }}" target="_blank" rel="noopener noreferrer" class="flash-content-main flash-banner-clickable" title="Click to open {{ m.title }} description, ratings & reviews in a new tab">
-              <div class="flash-poster-thumb">
+              <div class="flash-poster-thumb item-poster-trailer-btn" data-item-id="{{ m.id }}" data-item-title="{{ m.title }}" title="▶ Watch {{ m.title }} Trailer" style="cursor: pointer;">
                 {% if m.image_url %}
                   <img src="{{ m.image_url }}" alt="{{ m.title }}" loading="lazy">
                 {% else %}
                   <div class="flash-poster-placeholder">🎬</div>
                 {% endif %}
+                <div class="poster-trailer-overlay">
+                  <span class="poster-trailer-icon">▶</span>
+                  <span class="poster-trailer-text">Trailer</span>
+                </div>
               </div>
 
               <div class="flash-details">
@@ -73,11 +77,11 @@
             </a>
 
             <div class="flash-actions-col">
+              <button type="button" class="btn-flash-trailer btn-movie-trailer-trigger" data-item-id="{{ m.id }}" data-item-title="{{ m.title }}" title="Watch {{ m.title }} official trailer">
+                ▶ Watch Trailer
+              </button>
               <a href="{{ url_for('items.detail', item_id=m.id) }}" target="_blank" rel="noopener noreferrer" class="btn-flash-detail" title="Open {{ m.title }} description, ratings & community reviews in a new tab">
                 ↗ Reviews & Details
-              </a>
-              <a href="{{ url_for('agent.index', q=m.title) }}" class="btn-flash-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ m.title|replace('\'', '\\\'') }}'); return false; }" title="Ask चित्राङ्कः about this movie">
-                🤖 Ask चित्राङ्कः
               </a>
               {% if g.user %}
                 <button type="button" class="btn-flash-collection btn-item-collection-quick" data-item-id="{{ m.id }}" data-item-title="{{ m.title }}" data-item-type="{{ m.type }}" title="Add to collection">
@@ -266,15 +270,29 @@
       {% set current = user_ratings.get(item['id']) %}
       <div class="item-card item-card-{{ item['type'] }}" data-item-id="{{ item['id'] }}">
         <div class="item-media">
-          <a href="{{ url_for('items.detail', item_id=item['id']) }}" target="_blank" rel="noopener noreferrer" class="item-media-link" title="Open {{ item['title'] }} description, ratings & reviews in a new tab">
-            {% if item.image_url %}
-              <img src="{{ item.image_url }}" alt="{{ item['title'] }}" loading="lazy">
-            {% else %}
-              <div class="item-placeholder">
-                {% if item['type'] == 'movie' %}🎬{% elif item['type'] == 'song' %}🎵{% else %}🏆{% endif %}
+          {% if item['type'] == 'movie' %}
+            <div class="item-media-link item-poster-trailer-btn" data-item-id="{{ item['id'] }}" data-item-title="{{ item['title'] }}" title="▶ Watch {{ item['title'] }} Trailer" style="cursor: pointer;">
+              {% if item.image_url %}
+                <img src="{{ item.image_url }}" alt="{{ item['title'] }}" loading="lazy">
+              {% else %}
+                <div class="item-placeholder">🎬</div>
+              {% endif %}
+              <div class="poster-trailer-overlay">
+                <span class="poster-trailer-icon">▶</span>
+                <span class="poster-trailer-text">Watch Trailer</span>
               </div>
-            {% endif %}
-          </a>
+            </div>
+          {% else %}
+            <a href="{{ url_for('items.detail', item_id=item['id']) }}" target="_blank" rel="noopener noreferrer" class="item-media-link" title="Open {{ item['title'] }} description, ratings & reviews in a new tab">
+              {% if item.image_url %}
+                <img src="{{ item.image_url }}" alt="{{ item['title'] }}" loading="lazy">
+              {% else %}
+                <div class="item-placeholder">
+                  {% if item['type'] == 'song' %}🎵{% else %}🏆{% endif %}
+                </div>
+              {% endif %}
+            </a>
+          {% endif %}
         </div>
         <div class="item-card-body">
           <div class="item-type-row">
@@ -316,11 +334,6 @@
             <a href="{{ url_for('items.detail', item_id=item['id']) }}" target="_blank" rel="noopener noreferrer" class="btn-item-detail-action" title="Open {{ item['title'] }} description, ratings & community reviews in a new tab">
               ↗ Reviews & Details
             </a>
-            {% if item['type'] in ('movie', 'song') %}
-              <a href="{{ url_for('agent.index', q=item['title']) }}" class="btn-ask-agent" onclick="if(window.openChitrankah){ window.openChitrankah('{{ item.title|replace('\'', '\\\'') }}'); return false; }" title="चित्राङ्कः से पूछें (Ask चित्राङ्कः)">
-                🤖 चित्राङ्कः
-              </a>
-            {% endif %}
           </div>
           {% if g.user %}
             <form method="post" action="{{ url_for('items.rate', item_id=item['id']) }}" class="rate-form">
@@ -343,6 +356,32 @@
     {% endfor %}
   </div>
 
+</div>
+
+<!-- Movie Official Trailer Modal -->
+<div class="trailer-modal-backdrop" id="movieTrailerModal" aria-hidden="true" style="display: none;">
+  <div class="trailer-modal-dialog">
+    <div class="trailer-modal-header">
+      <div class="trailer-modal-title-wrap">
+        <span class="trailer-badge">🎬 OFFICIAL TRAILER</span>
+        <h3 id="trailerModalMovieTitle" class="trailer-movie-title">Movie Trailer</h3>
+      </div>
+      <button type="button" class="trailer-modal-close-btn" id="closeTrailerModalBtn" aria-label="Close trailer">&times;</button>
+    </div>
+    <div class="trailer-modal-body">
+      <div class="trailer-player-container" id="trailerPlayerContainer">
+        <div class="trailer-loading-state" id="trailerLoadingSpinner">
+          <div class="spinner-dot"></div>
+          <span>Loading official trailer...</span>
+        </div>
+        <iframe id="trailerIframe" src="" title="Movie Official Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
+      </div>
+    </div>
+    <div class="trailer-modal-footer">
+      <a href="#" id="trailerDetailLink" target="_blank" rel="noopener noreferrer" class="btn btn-small">↗ View Full Reviews & Details</a>
+      <a href="#" id="trailerYoutubeExternalLink" target="_blank" rel="noopener noreferrer" class="btn-ghost btn-small">Watch on YouTube ↗</a>
+    </div>
+  </div>
 </div>
 
 {% include "_add_to_collection_modal.html" %}
@@ -668,7 +707,8 @@
           </div>
 
           <div class="modal-action-bar">
-            ${data.type !== 'team' ? `<a href="/agent/?q=${encodeURIComponent(data.title)}" class="btn-ask-agent" onclick="if(window.openChitrankah){ window.openChitrankah('${escapeHtml(data.title.replace(/'/g, "\\'"))}'); return false; }">🤖 Ask चित्राङ्कः</a>` : ''}
+            ${data.type === 'movie' && data.trailer ? `<button type="button" class="btn btn-small" onclick="closeItemModal(); openMovieTrailer(${data.id}, '${escapeHtml(data.title.replace(/'/g, "\\'"))}');">▶ Watch Trailer</button>` : ''}
+            ${data.type === 'song' ? `<a href="/agent/?q=${encodeURIComponent(data.title)}" class="btn-modal-agent" onclick="if(window.openChitrankah){ window.openChitrankah('${escapeHtml(data.title.replace(/'/g, "\\'"))}'); return false; }">🤖 Ask चित्राङ्कः</a>` : ''}
             <a href="/items/${data.id}" class="btn-ghost btn-small">🔗 Open Full Page</a>
           </div>
         </div>
@@ -805,6 +845,98 @@
         }
       });
     }
+  // Movie Official Trailer Modal Handler
+  function openMovieTrailer(itemId, movieTitle) {
+    var modal = document.getElementById('movieTrailerModal');
+    var titleEl = document.getElementById('trailerModalMovieTitle');
+    var iframe = document.getElementById('trailerIframe');
+    var spinner = document.getElementById('trailerLoadingSpinner');
+    var detailLink = document.getElementById('trailerDetailLink');
+    var ytLink = document.getElementById('trailerYoutubeExternalLink');
+
+    if (!modal || !iframe) return;
+
+    if (titleEl) titleEl.innerText = movieTitle || 'Movie Trailer';
+    if (detailLink) detailLink.href = '/items/' + itemId;
+    if (spinner) {
+      spinner.style.display = 'flex';
+      spinner.innerHTML = '<div class="spinner-dot"></div><span>Loading official trailer...</span>';
+    }
+    iframe.style.display = 'none';
+    iframe.src = '';
+
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('trailer-modal-open');
+
+    fetch('/items/' + itemId + '/trailer')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.success && data.trailer && data.trailer.embed_url) {
+          iframe.src = data.trailer.embed_url;
+          iframe.style.display = 'block';
+          if (spinner) spinner.style.display = 'none';
+          if (ytLink) {
+            ytLink.href = data.trailer.watch_url || '#';
+            ytLink.style.display = 'inline-flex';
+          }
+        } else {
+          if (spinner) {
+            spinner.innerHTML = '<span>Could not load trailer for ' + escapeHtml(movieTitle) + '.</span>';
+          }
+        }
+      })
+      .catch(function(err) {
+        console.warn('Trailer load error:', err);
+        if (spinner) {
+          spinner.innerHTML = '<span>Trailer currently unavailable.</span>';
+        }
+      });
+  }
+
+  function closeMovieTrailer() {
+    var modal = document.getElementById('movieTrailerModal');
+    var iframe = document.getElementById('trailerIframe');
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('trailer-modal-open');
+    if (iframe) iframe.src = '';
+  }
+
+  // Bind close button and backdrop click
+  var closeTrailerBtn = document.getElementById('closeTrailerModalBtn');
+  if (closeTrailerBtn) {
+    closeTrailerBtn.addEventListener('click', closeMovieTrailer);
+  }
+  var trailerModalEl = document.getElementById('movieTrailerModal');
+  if (trailerModalEl) {
+    trailerModalEl.addEventListener('click', function(e) {
+      if (e.target === trailerModalEl) {
+        closeMovieTrailer();
+      }
+    });
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeMovieTrailer();
+    }
+  });
+
+  // Delegate trailer triggers from posters and banner buttons
+  document.addEventListener('click', function(e) {
+    var trigger = e.target.closest('.item-poster-trailer-btn, .btn-movie-trailer-trigger');
+    if (trigger) {
+      e.preventDefault();
+      e.stopPropagation();
+      var id = trigger.getAttribute('data-item-id');
+      var title = trigger.getAttribute('data-item-title');
+      if (id) {
+        openMovieTrailer(id, title);
+      }
+    }
+  });
+
   // Clear search input button handler
   var clearBtn = document.getElementById('btn-clear-search-text');
   var searchInput = document.getElementById('catalog-search-input');

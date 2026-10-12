@@ -27,7 +27,7 @@
       <nav class="site-nav">
         <a href="{{ url_for('items.browse') }}">Browse</a>
         <a href="{{ url_for('collections.index') }}">Collections</a>
-        <a href="{{ url_for('agent.index') }}">चित्राङ्कः</a>
+        <a href="{{ url_for('agent.index') }}" title="चित्राङ्कः (Chitrankah) - RAG AI Cinema & Ratings Agent">चित्राङ्कः (Chitrankah)</a>
         <a href="{{ url_for('feed.feed') }}">Feed</a>
         {% if g.user %}
           <a href="{{ url_for('recommend.people') }}">Find people</a>
@@ -71,7 +71,7 @@
   {% with messages = get_flashed_messages() %}
     {% if messages %}
       <div class="container">
-        <ul class="flashes">
+        <ul class="flashes flashes-compact">
           {% for message in messages %}<li>{{ message }}</li>{% endfor %}
         </ul>
       </div>

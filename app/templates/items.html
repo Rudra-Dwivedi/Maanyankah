@@ -78,14 +78,17 @@
 
             <div class="flash-actions-col">
               <button type="button" class="btn-flash-trailer btn-movie-trailer-trigger" data-item-id="{{ m.id }}" data-item-title="{{ m.title }}" title="Watch {{ m.title }} official trailer">
-                ▶ Watch Trailer
+                ▶ Trailer
+              </button>
+              <button type="button" class="btn-flash-review btn-soothing-trigger" data-item-id="{{ m.id }}" data-item-title="{{ m.title }}" title="Write a peaceful review for {{ m.title }}">
+                ✍️ Review
               </button>
               <a href="{{ url_for('items.detail', item_id=m.id) }}" target="_blank" rel="noopener noreferrer" class="btn-flash-detail" title="Open {{ m.title }} description, ratings & community reviews in a new tab">
-                ↗ Reviews & Details
+                ↗ Details
               </a>
               {% if g.user %}
                 <button type="button" class="btn-flash-collection btn-item-collection-quick" data-item-id="{{ m.id }}" data-item-title="{{ m.title }}" data-item-type="{{ m.type }}" title="Add to collection">
-                  📁 + Collection
+                  📁 + List
                 </button>
               {% endif %}
             </div>
@@ -331,6 +334,11 @@
           </div>
 
           <div class="item-card-actions-row">
+            {% if item['type'] == 'movie' %}
+              <button type="button" class="btn-item-soothing-review btn-soothing-trigger" data-item-id="{{ item['id'] }}" data-item-title="{{ item['title'] }}" title="Review {{ item['title'] }} specifically with a soothing UI">
+                ✍️ Review
+              </button>
+            {% endif %}
             <a href="{{ url_for('items.detail', item_id=item['id']) }}" target="_blank" rel="noopener noreferrer" class="btn-item-detail-action" title="Open {{ item['title'] }} description, ratings & community reviews in a new tab">
               ↗ Reviews & Details
             </a>
@@ -358,28 +366,153 @@
 
 </div>
 
-<!-- Movie Official Trailer Modal -->
+<!-- Movie Official Trailer & Overview Preview Modal -->
 <div class="trailer-modal-backdrop" id="movieTrailerModal" aria-hidden="true" style="display: none;">
   <div class="trailer-modal-dialog">
     <div class="trailer-modal-header">
       <div class="trailer-modal-title-wrap">
-        <span class="trailer-badge">🎬 OFFICIAL TRAILER</span>
-        <h3 id="trailerModalMovieTitle" class="trailer-movie-title">Movie Trailer</h3>
+        <span class="trailer-badge">🎬 TRAILER & CINEMA PREVIEW</span>
+        <h3 id="trailerModalMovieTitle" class="trailer-movie-title">Movie Preview</h3>
       </div>
-      <button type="button" class="trailer-modal-close-btn" id="closeTrailerModalBtn" aria-label="Close trailer">&times;</button>
+      <button type="button" class="trailer-modal-close-btn" id="closeTrailerModalBtn" aria-label="Close modal">&times;</button>
     </div>
     <div class="trailer-modal-body">
+      <!-- 16:9 Official Trailer Video Player -->
       <div class="trailer-player-container" id="trailerPlayerContainer">
         <div class="trailer-loading-state" id="trailerLoadingSpinner">
           <div class="spinner-dot"></div>
-          <span>Loading official trailer...</span>
+          <span>Loading official trailer & cinema overview...</span>
         </div>
         <iframe id="trailerIframe" src="" title="Movie Official Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
       </div>
+
+      <!-- Movie Overview & Cultural Intelligence Panel -->
+      <div class="trailer-movie-info-panel" id="trailerMovieInfoPanel" style="display: none;">
+        <div class="trailer-info-header">
+          <div class="trailer-info-meta-chips" id="trailerInfoMetaChips">
+            <!-- Badges for release year, genres, TMDB rating, etc. -->
+          </div>
+          <div class="trailer-info-scores">
+            <span class="star-gold">★</span>
+            <strong id="trailerInfoAvgScore">0.0</strong> <span class="score-scale">/ 5</span>
+            <span class="score-count" id="trailerInfoRatingCount">(0 ratings)</span>
+          </div>
+        </div>
+
+        <div class="trailer-credits-row" id="trailerCreditsRow">
+          <!-- Director, Cast, Runtime -->
+        </div>
+
+        <div class="trailer-overview-box">
+          <h4 class="trailer-overview-heading">📖 Synopsis & Overview</h4>
+          <p class="trailer-overview-text" id="trailerOverviewText"></p>
+        </div>
+
+        <div class="trailer-themes-box" id="trailerThemesBox" style="display: none;">
+          <strong>Core Themes & Craft:</strong> <span id="trailerThemesText"></span>
+        </div>
+
+        <!-- Community Review Quotes Snippet -->
+        <div class="trailer-reviews-snippet" id="trailerReviewsSnippet">
+          <div class="trailer-reviews-heading">💬 Community Reviews</div>
+          <div class="trailer-reviews-list" id="trailerReviewsList">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
     </div>
+
     <div class="trailer-modal-footer">
-      <a href="#" id="trailerDetailLink" target="_blank" rel="noopener noreferrer" class="btn btn-small">↗ View Full Reviews & Details</a>
-      <a href="#" id="trailerYoutubeExternalLink" target="_blank" rel="noopener noreferrer" class="btn-ghost btn-small">Watch on YouTube ↗</a>
+      <div class="trailer-footer-actions-left">
+        <button type="button" class="btn btn-soothing-review-trigger" id="trailerModalReviewBtn">
+          ✍️ Write Peaceful Review
+        </button>
+        <a href="#" id="trailerDetailLink" target="_blank" rel="noopener noreferrer" class="btn-ghost btn-small">
+          ↗ Full Details (New Tab)
+        </a>
+      </div>
+      <div class="trailer-footer-actions-right">
+        <a href="#" id="trailerYoutubeExternalLink" target="_blank" rel="noopener noreferrer" class="btn-ghost btn-small" style="display: none;">
+          Watch on YouTube ↗
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Soothing Movie Review Modal -->
+<div class="soothing-review-backdrop" id="soothingReviewModal" aria-hidden="true" style="display: none;">
+  <div class="soothing-review-dialog">
+    <div class="soothing-review-header">
+      <div class="soothing-brand-badge">
+        <span class="soothing-leaf-icon">🌸</span>
+        <span>MINDFUL MOVIE REVIEW</span>
+      </div>
+      <button type="button" class="soothing-close-btn" id="closeSoothingReviewBtn" aria-label="Close review modal">&times;</button>
+    </div>
+
+    <div class="soothing-dialog-body">
+      <h3 class="soothing-movie-title" id="soothingReviewMovieTitle">Review Movie</h3>
+      <p class="soothing-subtitle">Reflect peacefully on your cinematic experience, atmosphere, and standout moments.</p>
+
+      {% if g.user %}
+        <form id="soothingReviewForm" class="soothing-form">
+          <input type="hidden" id="soothingReviewItemId" name="item_id" value="">
+          <input type="hidden" id="soothingSelectedRating" name="rating" value="5">
+          <input type="hidden" id="soothingSelectedVibe" name="vibe_tag" value="">
+
+          <!-- Soothing Star Rating Selector -->
+          <div class="soothing-rating-section">
+            <label class="soothing-label">Your Impression</label>
+            <div class="soothing-stars-row" id="soothingStarsRow">
+              <button type="button" class="soothing-star-btn active" data-rating="1" title="1 Star">★</button>
+              <button type="button" class="soothing-star-btn active" data-rating="2" title="2 Stars">★</button>
+              <button type="button" class="soothing-star-btn active" data-rating="3" title="3 Stars">★</button>
+              <button type="button" class="soothing-star-btn active" data-rating="4" title="4 Stars">★</button>
+              <button type="button" class="soothing-star-btn active" data-rating="5" title="5 Stars">★</button>
+            </div>
+            <div class="soothing-rating-label" id="soothingRatingDesc">An extraordinary masterpiece (5★)</div>
+          </div>
+
+          <!-- Tranquil Vibe Chips -->
+          <div class="soothing-vibes-section">
+            <label class="soothing-label">Atmosphere & Emotional Vibe</label>
+            <div class="soothing-chips-tray" id="soothingVibeChipsTray">
+              <button type="button" class="soothing-vibe-chip" data-vibe="Mind-Bending">🌌 Mind-Bending</button>
+              <button type="button" class="soothing-vibe-chip" data-vibe="Peaceful & Calming">🌿 Peaceful & Calming</button>
+              <button type="button" class="soothing-vibe-chip" data-vibe="Deeply Emotional">🎭 Deeply Emotional</button>
+              <button type="button" class="soothing-vibe-chip" data-vibe="Visually Stunning">✨ Visually Stunning</button>
+              <button type="button" class="soothing-vibe-chip" data-vibe="Thrilling Spectacle">⚡ Thrilling Spectacle</button>
+              <button type="button" class="soothing-vibe-chip" data-vibe="Soulful Craft">🎵 Soulful Craft</button>
+            </div>
+          </div>
+
+          <!-- Mindful Review Textarea -->
+          <div class="soothing-textarea-section">
+            <label class="soothing-label" for="soothingReviewText">Your Thoughts & Takeaways</label>
+            <textarea id="soothingReviewText" name="content" rows="4" class="soothing-textarea" placeholder="Share what resonated with you... The performances, cinematography, subtle themes, or personal takeaways..."></textarea>
+            <div class="soothing-meta-hint-row">
+              <span class="soothing-sentiment-tag" id="soothingSentimentPreview">✨ Mindful & Balanced</span>
+              <span class="soothing-char-counter" id="soothingCharCounter">0 characters</span>
+            </div>
+          </div>
+
+          <div class="soothing-status-msg" id="soothingFormFeedback" style="display: none;"></div>
+
+          <div class="soothing-actions-row">
+            <button type="button" class="btn-ghost btn-small" id="cancelSoothingReviewBtn">Cancel</button>
+            <button type="submit" class="btn btn-soothing-submit" id="submitSoothingReviewBtn">
+              <span class="submit-lbl">✨ Post Peaceful Review</span>
+              <span class="submit-spinner" style="display: none;">⏳ Saving...</span>
+            </button>
+          </div>
+        </form>
+      {% else %}
+        <div class="soothing-login-prompt">
+          <p>Please log in to share your thoughts and rate this film with our community.</p>
+          <a href="{{ url_for('auth.login') }}" class="btn btn-small">Log In to Review</a>
+        </div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -845,7 +978,7 @@
         }
       });
     }
-  // Movie Official Trailer Modal Handler
+  // Movie Official Trailer & Overview Preview Modal Handler
   function openMovieTrailer(itemId, movieTitle) {
     var modal = document.getElementById('movieTrailerModal');
     var titleEl = document.getElementById('trailerModalMovieTitle');
@@ -853,15 +986,22 @@
     var spinner = document.getElementById('trailerLoadingSpinner');
     var detailLink = document.getElementById('trailerDetailLink');
     var ytLink = document.getElementById('trailerYoutubeExternalLink');
+    var infoPanel = document.getElementById('trailerMovieInfoPanel');
+    var reviewBtn = document.getElementById('trailerModalReviewBtn');
 
     if (!modal || !iframe) return;
 
-    if (titleEl) titleEl.innerText = movieTitle || 'Movie Trailer';
+    if (titleEl) titleEl.innerText = movieTitle || 'Movie Preview';
     if (detailLink) detailLink.href = '/items/' + itemId;
+    if (reviewBtn) {
+      reviewBtn.setAttribute('data-item-id', itemId);
+      reviewBtn.setAttribute('data-item-title', movieTitle || '');
+    }
     if (spinner) {
       spinner.style.display = 'flex';
-      spinner.innerHTML = '<div class="spinner-dot"></div><span>Loading official trailer...</span>';
+      spinner.innerHTML = '<div class="spinner-dot"></div><span>Loading official trailer & cinema overview...</span>';
     }
+    if (infoPanel) infoPanel.style.display = 'none';
     iframe.style.display = 'none';
     iframe.src = '';
 
@@ -869,10 +1009,14 @@
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('trailer-modal-open');
 
-    fetch('/items/' + itemId + '/trailer')
+    // Fetch quick-view which has BOTH trailer and overview
+    fetch('/items/' + itemId + '/quick-view')
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (data && data.success && data.trailer && data.trailer.embed_url) {
+        if (!data) return;
+
+        // 1. Trailer video
+        if (data.trailer && data.trailer.embed_url) {
           iframe.src = data.trailer.embed_url;
           iframe.style.display = 'block';
           if (spinner) spinner.style.display = 'none';
@@ -882,15 +1026,74 @@
           }
         } else {
           if (spinner) {
-            spinner.innerHTML = '<span>Could not load trailer for ' + escapeHtml(movieTitle) + '.</span>';
+            spinner.innerHTML = '<span>Trailer currently unavailable for ' + escapeHtml(data.title || movieTitle) + '.</span>';
           }
+        }
+
+        // 2. Overview, Ratings & Reviews
+        if (infoPanel) {
+          var metaChips = document.getElementById('trailerInfoMetaChips');
+          var avgScore = document.getElementById('trailerInfoAvgScore');
+          var ratingCount = document.getElementById('trailerInfoRatingCount');
+          var creditsRow = document.getElementById('trailerCreditsRow');
+          var overviewText = document.getElementById('trailerOverviewText');
+          var themesBox = document.getElementById('trailerThemesBox');
+          var themesText = document.getElementById('trailerThemesText');
+          var reviewsList = document.getElementById('trailerReviewsList');
+
+          if (titleEl) titleEl.innerText = data.title + (data.release_date ? ' (' + data.release_date.slice(0, 4) + ')' : '');
+          if (avgScore) avgScore.innerText = data.avg_rating || '0.0';
+          if (ratingCount) ratingCount.innerText = '(' + (data.rating_count || 0) + ' ratings)';
+
+          if (metaChips) {
+            var chipsHtml = '<span class="trailer-chip trailer-chip-type">' + (data.type || 'MOVIE').toUpperCase() + '</span>';
+            if (data.release_date) chipsHtml += '<span class="trailer-chip">📅 ' + escapeHtml(data.release_date.slice(0, 4)) + '</span>';
+            if (data.vote_average && data.vote_average > 0) chipsHtml += '<span class="trailer-chip">🎬 TMDB ' + data.vote_average + '/10</span>';
+            (data.genres || []).forEach(function(g) {
+              chipsHtml += '<span class="trailer-chip trailer-genre-chip">#' + escapeHtml(g) + '</span>';
+            });
+            metaChips.innerHTML = chipsHtml;
+          }
+
+          if (creditsRow) {
+            var credsHtml = '';
+            if (data.director) credsHtml += '<div class="trailer-credit-item"><span class="cred-lbl">Director:</span> <strong>' + escapeHtml(data.director) + '</strong></div>';
+            if (data.cast) credsHtml += '<div class="trailer-credit-item"><span class="cred-lbl">Starring:</span> <span>' + escapeHtml(data.cast) + '</span></div>';
+            if (data.runtime) credsHtml += '<div class="trailer-credit-item"><span class="cred-lbl">Runtime:</span> <span>' + escapeHtml(data.runtime) + '</span></div>';
+            creditsRow.innerHTML = credsHtml;
+          }
+
+          if (overviewText) overviewText.innerText = data.description || 'No overview synopsis recorded.';
+
+          if (themesBox && themesText) {
+            if (data.themes) {
+              themesText.innerText = data.themes;
+              themesBox.style.display = 'block';
+            } else {
+              themesBox.style.display = 'none';
+            }
+          }
+
+          if (reviewsList) {
+            if (data.comments && data.comments.length > 0) {
+              var revHtml = '';
+              data.comments.slice(0, 3).forEach(function(c) {
+                revHtml += '<div class="trailer-review-bubble">';
+                revHtml += '<div class="trailer-rev-user"><strong>@' + escapeHtml(c.username) + '</strong> <small class="text-muted">' + escapeHtml(c.created_at_fmt || '') + '</small></div>';
+                revHtml += '<p class="trailer-rev-content">"' + escapeHtml(c.content) + '"</p>';
+                revHtml += '</div>';
+              });
+              reviewsList.innerHTML = revHtml;
+            } else {
+              reviewsList.innerHTML = '<p class="text-muted-sm" style="padding: 0.4rem 0;">No written reviews yet. Be the first to review!</p>';
+            }
+          }
+
+          infoPanel.style.display = 'block';
         }
       })
       .catch(function(err) {
-        console.warn('Trailer load error:', err);
-        if (spinner) {
-          spinner.innerHTML = '<span>Trailer currently unavailable.</span>';
-        }
+        console.warn('Overview/Trailer fetch error:', err);
       });
   }
 
@@ -904,7 +1107,7 @@
     if (iframe) iframe.src = '';
   }
 
-  // Bind close button and backdrop click
+  // Bind trailer close buttons
   var closeTrailerBtn = document.getElementById('closeTrailerModalBtn');
   if (closeTrailerBtn) {
     closeTrailerBtn.addEventListener('click', closeMovieTrailer);
@@ -917,23 +1120,231 @@
       }
     });
   }
+
+  // -------------------------------------------------------------------------
+  // Soothing Movie Review Modal Logic
+  // -------------------------------------------------------------------------
+  var currentSoothingRating = 5;
+  var currentSoothingVibe = '';
+  var ratingDescriptions = {
+    1: 'A quiet reflection & nuance (1★)',
+    2: 'Intriguing elements, room to grow (2★)',
+    3: 'Satisfying & enjoyable experience (3★)',
+    4: 'Heartfelt, memorable & resonant (4★)',
+    5: 'An extraordinary masterpiece (5★)'
+  };
+
+  function openSoothingReviewModal(itemId, movieTitle) {
+    var modal = document.getElementById('soothingReviewModal');
+    var titleEl = document.getElementById('soothingReviewMovieTitle');
+    var idInput = document.getElementById('soothingReviewItemId');
+    var feedback = document.getElementById('soothingFormFeedback');
+    var textarea = document.getElementById('soothingReviewText');
+
+    if (!modal) return;
+    if (titleEl) titleEl.innerText = 'Reflections on ' + (movieTitle || 'Movie');
+    if (idInput) idInput.value = itemId;
+    if (feedback) feedback.style.display = 'none';
+    if (textarea) textarea.value = '';
+
+    setSoothingRating(5);
+    setSoothingVibe('');
+
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('soothing-modal-open');
+  }
+
+  function closeSoothingReviewModal() {
+    var modal = document.getElementById('soothingReviewModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('soothing-modal-open');
+  }
+
+  function setSoothingRating(r) {
+    currentSoothingRating = r;
+    var ratingInput = document.getElementById('soothingSelectedRating');
+    if (ratingInput) ratingInput.value = r;
+
+    var descEl = document.getElementById('soothingRatingDesc');
+    if (descEl) descEl.innerText = ratingDescriptions[r] || (r + ' Stars');
+
+    var stars = document.querySelectorAll('.soothing-star-btn');
+    stars.forEach(function(star) {
+      var starVal = parseInt(star.getAttribute('data-rating'), 10);
+      if (starVal <= r) {
+        star.classList.add('active');
+      } else {
+        star.classList.remove('active');
+      }
+    });
+  }
+
+  function setSoothingVibe(vibe) {
+    currentSoothingVibe = (currentSoothingVibe === vibe) ? '' : vibe;
+    var vibeInput = document.getElementById('soothingSelectedVibe');
+    if (vibeInput) vibeInput.value = currentSoothingVibe;
+
+    var chips = document.querySelectorAll('.soothing-vibe-chip');
+    chips.forEach(function(chip) {
+      if (chip.getAttribute('data-vibe') === currentSoothingVibe) {
+        chip.classList.add('active');
+      } else {
+        chip.classList.remove('active');
+      }
+    });
+  }
+
+  // Star button listeners
+  document.querySelectorAll('.soothing-star-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var r = parseInt(this.getAttribute('data-rating'), 10);
+      if (r) setSoothingRating(r);
+    });
+  });
+
+  // Vibe chip listeners
+  document.querySelectorAll('.soothing-vibe-chip').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var v = this.getAttribute('data-vibe');
+      if (v) setSoothingVibe(v);
+    });
+  });
+
+  // Textarea character count & sentiment hint
+  var soothingTextarea = document.getElementById('soothingReviewText');
+  var charCounter = document.getElementById('soothingCharCounter');
+  if (soothingTextarea && charCounter) {
+    soothingTextarea.addEventListener('input', function() {
+      charCounter.innerText = this.value.length + ' characters';
+    });
+  }
+
+  // Close soothing review modal
+  var closeSoothingBtn = document.getElementById('closeSoothingReviewBtn');
+  var cancelSoothingBtn = document.getElementById('cancelSoothingReviewBtn');
+  if (closeSoothingBtn) closeSoothingBtn.addEventListener('click', closeSoothingReviewModal);
+  if (cancelSoothingBtn) cancelSoothingBtn.addEventListener('click', closeSoothingReviewModal);
+
+  var soothingModalEl = document.getElementById('soothingReviewModal');
+  if (soothingModalEl) {
+    soothingModalEl.addEventListener('click', function(e) {
+      if (e.target === soothingModalEl) closeSoothingReviewModal();
+    });
+  }
+
+  // Submit soothing review
+  var soothingForm = document.getElementById('soothingReviewForm');
+  if (soothingForm) {
+    soothingForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var itemId = document.getElementById('soothingReviewItemId').value;
+      var rating = currentSoothingRating;
+      var vibe = currentSoothingVibe;
+      var content = (document.getElementById('soothingReviewText').value || '').trim();
+      var feedback = document.getElementById('soothingFormFeedback');
+      var submitBtn = document.getElementById('submitSoothingReviewBtn');
+      var submitLbl = submitBtn ? submitBtn.querySelector('.submit-lbl') : null;
+      var submitSpinner = submitBtn ? submitBtn.querySelector('.submit-spinner') : null;
+
+      if (!itemId) return;
+
+      if (submitBtn) submitBtn.disabled = true;
+      if (submitLbl) submitLbl.style.display = 'none';
+      if (submitSpinner) submitSpinner.style.display = 'inline';
+
+      fetch('/items/' + itemId + '/submit-review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ rating: rating, content: content, vibe_tag: vibe })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          if (feedback) {
+            feedback.className = 'soothing-status-msg success';
+            feedback.innerHTML = '✨ ' + escapeHtml(res.message);
+            feedback.style.display = 'block';
+          }
+          // Update average score on active card if present
+          var card = document.querySelector('.item-card[data-item-id="' + itemId + '"]');
+          if (card) {
+            var avgEl = card.querySelector('.item-avg-num');
+            var cntEl = card.querySelector('.item-rating-count');
+            if (avgEl) avgEl.innerText = res.avg_rating;
+            if (cntEl) cntEl.innerText = '(' + res.rating_count + ' ratings)';
+          }
+          // Update in overview modal if open
+          var modalAvg = document.getElementById('trailerInfoAvgScore');
+          var modalCnt = document.getElementById('trailerInfoRatingCount');
+          if (modalAvg) modalAvg.innerText = res.avg_rating;
+          if (modalCnt) modalCnt.innerText = '(' + res.rating_count + ' ratings)';
+
+          setTimeout(function() {
+            closeSoothingReviewModal();
+          }, 1400);
+        } else {
+          if (feedback) {
+            feedback.className = 'soothing-status-msg error';
+            feedback.innerText = res.error || 'Failed to submit review.';
+            feedback.style.display = 'block';
+          }
+        }
+      })
+      .catch(function(err) {
+        if (feedback) {
+          feedback.className = 'soothing-status-msg error';
+          feedback.innerText = 'Network error while submitting review.';
+          feedback.style.display = 'block';
+        }
+      })
+      .finally(function() {
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitLbl) submitLbl.style.display = 'inline';
+        if (submitSpinner) submitSpinner.style.display = 'none';
+      });
+    });
+  }
+
+  // Keyboard escape handler for modals
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       closeMovieTrailer();
+      closeSoothingReviewModal();
     }
   });
 
-  // Delegate trailer triggers from posters and banner buttons
+  // Global delegation for trailer triggers & soothing review triggers
   document.addEventListener('click', function(e) {
-    var trigger = e.target.closest('.item-poster-trailer-btn, .btn-movie-trailer-trigger');
-    if (trigger) {
+    var trailerTrigger = e.target.closest('.item-poster-trailer-btn, .btn-movie-trailer-trigger');
+    if (trailerTrigger) {
       e.preventDefault();
       e.stopPropagation();
-      var id = trigger.getAttribute('data-item-id');
-      var title = trigger.getAttribute('data-item-title');
+      var id = trailerTrigger.getAttribute('data-item-id');
+      var title = trailerTrigger.getAttribute('data-item-title');
       if (id) {
         openMovieTrailer(id, title);
       }
+      return;
+    }
+
+    var soothingTrigger = e.target.closest('.btn-soothing-trigger, #trailerModalReviewBtn');
+    if (soothingTrigger) {
+      e.preventDefault();
+      e.stopPropagation();
+      var sId = soothingTrigger.getAttribute('data-item-id');
+      var sTitle = soothingTrigger.getAttribute('data-item-title');
+      if (sId) {
+        openSoothingReviewModal(sId, sTitle);
+      }
+      return;
     }
   });
 

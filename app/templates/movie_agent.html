@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}चित्राङ्कः (Chitrankah) — AI Cinema & Ratings Agent{% endblock %}
+{% block title %}चित्राङ्कः (Chitrankah) — RAG AI Cinema & Ratings Agent{% endblock %}
 {% block content %}
 <div class="agent-page-wrapper">
   <div class="agent-page-container">
@@ -8,18 +8,22 @@
     <header class="agent-cockpit-header">
       <div class="agent-brand-col">
         <div class="agent-glow-avatar">
-          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः" class="agent-avatar-photo">
+          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः (Chitrankah)" class="agent-avatar-photo">
           <span class="avatar-status-dot" title="Live Agent"></span>
         </div>
         <div class="agent-header-meta">
           <div class="agent-title-badge-row">
             <h1 class="agent-display-title">
-              <img src="{{ url_for('static', filename='img/chitrankakah_logo.png') }}" alt="चित्राङ्कः" class="agent-cockpit-logo-img">
+              <span class="agent-brand-devanagari">चित्राङ्कः</span>
               <span class="agent-roman-title">(Chitrankah)</span>
             </h1>
-            <span class="agent-pill-badge">CINEMA INTELLIGENCE AI</span>
+            <span class="agent-pill-badge">RAG CINEMA INTELLIGENCE AI</span>
           </div>
-          <p class="agent-tagline">Deep-dive cinema analysis, real community rating distributions on <strong>मान्यांकः</strong>, viewer sentiment, and smart recommendations.</p>
+          <div class="rag-cockpit-bar">
+            <span class="rag-live-dot"></span>
+            <span class="rag-live-text">RAG Intelligence Active • Grounded in Maanyankah Catalog & Real User Reviews</span>
+          </div>
+          <p class="agent-tagline">RAG-grounded cinema intelligence, real community rating distributions on <strong>मान्यांकः</strong>, viewer sentiment, and direct video trailer playback.</p>
         </div>
       </div>
       <div class="agent-header-controls">
@@ -35,15 +39,14 @@
       <span class="quick-dock-label">💡 Quick prompts:</span>
       <div class="quick-chips-scroller">
         <button type="button" class="cockpit-chip" data-query="Tell me about Interstellar">🚀 Interstellar</button>
+        <button type="button" class="cockpit-chip" data-query="What do people say about Inception?">💬 Inception Reviews</button>
         <button type="button" class="cockpit-chip" data-query="Tell me about Bohemian Rhapsody">🎸 Bohemian Rhapsody</button>
         <button type="button" class="cockpit-chip" data-query="Tell me about Blinding Lights">✨ Blinding Lights</button>
         <button type="button" class="cockpit-chip" data-query="Tell me about Inception">🌀 Inception Breakdown</button>
         <button type="button" class="cockpit-chip" data-query="Tell me about Whiplash">🥁 Whiplash</button>
-        <button type="button" class="cockpit-chip" data-query="Tell me about Lose Yourself">🎤 Lose Yourself (Eminem)</button>
         <button type="button" class="cockpit-chip" data-query="Tell me about The Dark Knight">🦇 The Dark Knight</button>
         <button type="button" class="cockpit-chip" data-query="Tell me about Parasite">🏠 Parasite</button>
         <button type="button" class="cockpit-chip" data-query="Highest rated movies on Maanyankah">🏆 Top Films</button>
-        <button type="button" class="cockpit-chip" data-query="What are the top rated songs?">🎵 Top Songs</button>
       </div>
     </div>
 
@@ -759,6 +762,15 @@
     }
 
     function appendAgentTurn(data) {
+      let ragHtml = '';
+      if (data.rag_meta && data.rag_meta.source_badge) {
+        ragHtml = `
+          <div class="agent-rag-provenance-box">
+            <div class="rag-pill-badge"><span class="rag-dot"></span> ${escapeHtml(data.rag_meta.source_badge)}</div>
+          </div>
+        `;
+      }
+
       let bodyHtml = '';
       if (data.type === 'direct_answer') {
         bodyHtml = renderDirectAnswer(data);
@@ -771,7 +783,7 @@
       } else {
         bodyHtml = `
           <div class="agent-text-answer">
-            <h3>${escapeHtml(data.title || 'चित्राङ्कः')}</h3>
+            <h3>${escapeHtml(data.title || 'चित्राङ्कः (Chitrankah)')}</h3>
             <p>${escapeHtml(data.message)}</p>
           </div>
         `;
@@ -792,9 +804,10 @@
       row.className = 'chat-message-row agent-row';
       row.innerHTML = `
         <div class="agent-msg-avatar">
-          <img src="/static/img/chitrankakah_avatar.png" alt="चित्राङ्कः" class="agent-stream-photo">
+          <img src="/static/img/chitrankakah_avatar.png" alt="चित्राङ्कः (Chitrankah)" class="agent-stream-photo">
         </div>
         <div class="chat-bubble agent-bubble">
+          ${ragHtml}
           ${bodyHtml}
           ${followupHtml}
         </div>

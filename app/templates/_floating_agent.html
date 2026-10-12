@@ -2,12 +2,12 @@
 <!-- Floating AI Agent: चित्राङ्कः (Chitrankah) -->
 <div id="floating-agent-container" class="floating-agent-container">
   <!-- Floating Launcher Button -->
-  <button type="button" id="floating-agent-trigger" class="floating-agent-trigger" aria-label="Open चित्राङ्कः AI Movie Assistant" title="Open चित्राङ्कः (Chitrankah) AI Assistant">
+  <button type="button" id="floating-agent-trigger" class="floating-agent-trigger" aria-label="Open चित्राङ्कः (Chitrankah) AI Cinema Assistant" title="Open चित्राङ्कः (Chitrankah) - RAG AI Cinema Assistant">
     <div class="floating-trigger-avatar-wrap">
-      <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः" class="floating-trigger-thumb">
-      <span class="floating-pulse-badge" title="Online & Ready"></span>
+      <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः (Chitrankah)" class="floating-trigger-thumb">
+      <span class="floating-pulse-badge" title="RAG Engine Online & Ready"></span>
     </div>
-    <span class="floating-trigger-label">चित्राङ्कः</span>
+    <span class="floating-trigger-label">चित्राङ्कः (Chitrankah)</span>
   </button>
 
   <!-- Floating Chat Window / Drawer -->
@@ -16,16 +16,16 @@
     <div class="floating-header">
       <div class="floating-header-info">
         <div class="floating-header-avatar">
-          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः" class="agent-character-thumb">
+          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः (Chitrankah)" class="agent-character-thumb">
         </div>
         <div class="floating-header-text">
           <div class="floating-title-row">
             <h3 id="floating-agent-title" class="floating-agent-title">
-              <img src="{{ url_for('static', filename='img/chitrankakah_logo.png') }}" alt="चित्राङ्कः" class="floating-brand-logo">
+              <span class="floating-brand-text">चित्राङ्कः</span> <span class="floating-brand-roman">(Chitrankah)</span>
             </h3>
-            <span class="floating-agent-badge">AI AGENT</span>
+            <span class="floating-agent-badge">RAG AI AGENT</span>
           </div>
-          <span class="floating-subtitle">Cinema & Ratings Intelligence</span>
+          <span class="floating-subtitle">RAG Cinema & Ratings Intelligence</span>
         </div>
       </div>
       <div class="floating-header-actions">
@@ -33,7 +33,7 @@
         <a href="{{ url_for('agent.index') }}" class="floating-btn-header-action" title="Open full-screen AI Studio" aria-label="Open full page">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
-        <button type="button" id="floating-agent-close" class="floating-btn-header-action" title="Close चित्राङ्कः" aria-label="Close">✕</button>
+        <button type="button" id="floating-agent-close" class="floating-btn-header-action" title="Close चित्राङ्कः (Chitrankah)" aria-label="Close">✕</button>
       </div>
     </div>
 
@@ -42,6 +42,7 @@
       <button type="button" class="floating-chip" data-query="Highest rated movies on Maanyankah">🏆 Top Rated</button>
       <button type="button" class="floating-chip" data-query="Recommend a sci-fi thriller">🚀 Sci-Fi Pick</button>
       <button type="button" class="floating-chip" data-query="Tell me about Inception">🌀 Inception</button>
+      <button type="button" class="floating-chip" data-query="What do people say about Interstellar?">💬 User Reviews</button>
       <button type="button" class="floating-chip" data-query="What is the rating of The Dark Knight?">🦇 The Dark Knight</button>
       <button type="button" class="floating-chip" data-query="Tell me about Parasite">🏠 Parasite</button>
     </div>
@@ -51,12 +52,12 @@
       <!-- Default welcome bubble -->
       <div class="floating-bubble bubble-agent" id="floating-welcome-bubble">
         <div class="bubble-avatar">
-          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः" class="agent-character-thumb">
+          <img src="{{ url_for('static', filename='img/chitrankakah_avatar.png') }}" alt="चित्राङ्कः (Chitrankah)" class="agent-character-thumb">
         </div>
         <div class="bubble-content">
-          <img src="{{ url_for('static', filename='img/chitrankakah_logo.png') }}" alt="चित्राङ्कः" class="welcome-bubble-logo">
+          <div class="bubble-rag-tag"><span class="rag-dot"></span> RAG Intelligence Active</div>
           <p class="bubble-greeting"><strong>नमस्ते! I am चित्राङ्कः (Chitrankah).</strong></p>
-          <p class="bubble-text">Your intelligent cinema & ratings guide on <strong>मान्यांकः</strong>. Ask me about any movie, inspect community ratings & review quotes, or get personalized recommendations!</p>
+          <p class="bubble-text">Your RAG-grounded cinema & ratings guide on <strong>मान्यांकः</strong>. I retrieve live catalog metadata, real fan reviews, and official trailers to give you factual, grounded cinema intelligence.</p>
           <div class="bubble-actions">
             <button type="button" class="floating-bubble-chip" data-query="Highest rated movies on Maanyankah">⭐ View Top Ranked Movies</button>
           </div>
@@ -67,7 +68,7 @@
     <!-- Footer Input Bar -->
     <form id="floating-agent-form" class="floating-form">
       <div class="floating-input-wrap">
-        <input type="text" id="floating-agent-input" class="floating-input" placeholder="Ask चित्राङ्कः about movies, ratings..." autocomplete="off" required>
+        <input type="text" id="floating-agent-input" class="floating-input" placeholder="Ask चित्राङ्कः (Chitrankah) with RAG catalog grounding..." autocomplete="off" required>
       </div>
       <button type="submit" id="floating-send-btn" class="floating-send-btn" title="Send question" aria-label="Send">
         <span class="send-icon">➤</span>
@@ -340,6 +341,11 @@
   }
 
   function appendAgentBubble(data) {
+    let ragHtml = '';
+    if (data.rag_meta && data.rag_meta.source_badge) {
+      ragHtml = `<div class="float-rag-pill"><span class="rag-dot"></span> ${escapeHtml(data.rag_meta.source_badge)}</div>`;
+    }
+
     let bodyHtml = '';
     if (data.type === 'direct_answer') {
       bodyHtml = renderDirectAnswerHtml(data);
@@ -350,7 +356,7 @@
     } else {
       bodyHtml = `
         <div class="float-general-card">
-          <h4 class="float-general-title">${escapeHtml(data.title || 'चित्राङ्कः')}</h4>
+          <h4 class="float-general-title">${escapeHtml(data.title || 'चित्राङ्कः (Chitrankah)')}</h4>
           <p class="float-general-msg">${escapeHtml(data.message)}</p>
         </div>
       `;
@@ -370,8 +376,9 @@
     const bubble = document.createElement('div');
     bubble.className = 'floating-bubble bubble-agent';
     bubble.innerHTML = `
-      <div class="bubble-avatar"><img src="/static/img/chitrankakah_avatar.png" alt="चित्राङ्कः" class="agent-character-thumb"></div>
+      <div class="bubble-avatar"><img src="/static/img/chitrankakah_avatar.png" alt="चित्राङ्कः (Chitrankah)" class="agent-character-thumb"></div>
       <div class="bubble-content">
+        ${ragHtml}
         ${bodyHtml}
         ${suggestionsHtml}
       </div>

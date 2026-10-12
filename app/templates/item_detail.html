@@ -86,9 +86,14 @@
             ▶ Watch Trailer
           </button>
         {% endif %}
+        {% if item.type == 'movie' %}
+          <button type="button" class="btn btn-soothing-jump" onclick="document.getElementById('soothing-review-card')?.scrollIntoView({behavior: 'smooth'})">
+            ✍️ Review Movie
+          </button>
+        {% endif %}
         {% if item.type == 'song' %}
-          <a href="{{ url_for('agent.index', q=item.title) }}" class="btn btn-ask-agent-lg" title="Ask चित्राङ्कः deep cultural intelligence">
-            🤖 Ask चित्राङ्कः
+          <a href="{{ url_for('agent.index', q=item.title) }}" class="btn btn-ask-agent-lg" title="Ask चित्राङ्कः (Chitrankah) deep cultural intelligence">
+            🤖 Ask चित्राङ्कः (Chitrankah)
           </a>
         {% endif %}
         {% if g.user and item.type in ('movie', 'song') %}
@@ -142,6 +147,71 @@
               allowfullscreen>
             </iframe>
           </div>
+        </section>
+      {% endif %}
+
+      <!-- Soothing Movie Review Card -->
+      {% if item.type == 'movie' %}
+        <section class="detail-card soothing-review-detail-card" id="soothing-review-card">
+          <div class="soothing-card-header">
+            <div class="soothing-brand-badge">
+              <span class="soothing-leaf-icon">🌸</span>
+              <span>MINDFUL MOVIE REVIEW</span>
+            </div>
+            <h2 class="detail-card-heading">Share Your Reflection on {{ item.title }}</h2>
+            <p class="text-muted-sm">Rate this film and share your takeaways in a peaceful, soothing atmosphere.</p>
+          </div>
+
+          {% if g.user %}
+            <form method="post" action="{{ url_for('items.submit_review', item_id=item.id) }}" class="soothing-form detail-soothing-form">
+              <input type="hidden" name="rating" id="detailSelectedRating" value="{{ user_rating or 5 }}">
+              <input type="hidden" name="vibe_tag" id="detailSelectedVibe" value="">
+
+              <div class="soothing-rating-section">
+                <label class="soothing-label">Your Impression</label>
+                <div class="soothing-stars-row" id="detailStarsRow">
+                  {% for r in [1, 2, 3, 4, 5] %}
+                    <button type="button" class="soothing-star-btn {{ 'active' if (user_rating or 5) >= r }}" data-rating="{{ r }}" title="{{ r }} Star{% if r > 1 %}s{% endif %}">★</button>
+                  {% endfor %}
+                </div>
+                <div class="soothing-rating-label" id="detailRatingDesc">
+                  {% if user_rating == 1 %}A quiet reflection & nuance (1★)
+                  {% elif user_rating == 2 %}Intriguing elements, room to grow (2★)
+                  {% elif user_rating == 3 %}Satisfying & enjoyable experience (3★)
+                  {% elif user_rating == 4 %}Heartfelt, memorable & resonant (4★)
+                  {% else %}An extraordinary masterpiece (5★)
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="soothing-vibes-section">
+                <label class="soothing-label">Atmosphere & Emotional Vibe</label>
+                <div class="soothing-chips-tray" id="detailVibeChipsTray">
+                  <button type="button" class="soothing-vibe-chip" data-vibe="Mind-Bending">🌌 Mind-Bending</button>
+                  <button type="button" class="soothing-vibe-chip" data-vibe="Peaceful & Calming">🌿 Peaceful & Calming</button>
+                  <button type="button" class="soothing-vibe-chip" data-vibe="Deeply Emotional">🎭 Deeply Emotional</button>
+                  <button type="button" class="soothing-vibe-chip" data-vibe="Visually Stunning">✨ Visually Stunning</button>
+                  <button type="button" class="soothing-vibe-chip" data-vibe="Thrilling Spectacle">⚡ Thrilling Spectacle</button>
+                  <button type="button" class="soothing-vibe-chip" data-vibe="Soulful Craft">🎵 Soulful Craft</button>
+                </div>
+              </div>
+
+              <div class="soothing-textarea-section">
+                <label class="soothing-label" for="detailReviewContent">Your Thoughts & Takeaways</label>
+                <textarea id="detailReviewContent" name="content" rows="3" class="soothing-textarea" placeholder="Share what resonated with you... The performances, cinematography, subtle themes, or personal takeaways..."></textarea>
+              </div>
+
+              <div class="soothing-actions-row" style="margin-top: 1rem;">
+                <button type="submit" class="btn btn-soothing-submit">
+                  ✨ Post Peaceful Review
+                </button>
+              </div>
+            </form>
+          {% else %}
+            <div class="soothing-login-prompt">
+              <p>Want to review <strong>{{ item.title }}</strong>? <a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to write a review with our community.</p>
+            </div>
+          {% endif %}
         </section>
       {% endif %}
 
@@ -308,8 +378,56 @@
 
     </aside>
 
-  </div>
-
 </div>
+
+<script>
+(function() {
+  var ratingDescriptions = {
+    1: 'A quiet reflection & nuance (1★)',
+    2: 'Intriguing elements, room to grow (2★)',
+    3: 'Satisfying & enjoyable experience (3★)',
+    4: 'Heartfelt, memorable & resonant (4★)',
+    5: 'An extraordinary masterpiece (5★)'
+  };
+
+  // Detail page star rating clicks
+  var starBtns = document.querySelectorAll('#detailStarsRow .soothing-star-btn');
+  var ratingInput = document.getElementById('detailSelectedRating');
+  var descEl = document.getElementById('detailRatingDesc');
+
+  starBtns.forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var r = parseInt(this.getAttribute('data-rating'), 10);
+      if (ratingInput) ratingInput.value = r;
+      if (descEl) descEl.innerText = ratingDescriptions[r] || (r + ' Stars');
+      starBtns.forEach(function(sb) {
+        var sbVal = parseInt(sb.getAttribute('data-rating'), 10);
+        if (sbVal <= r) sb.classList.add('active');
+        else sb.classList.remove('active');
+      });
+    });
+  });
+
+  // Detail page vibe chips
+  var vibeChips = document.querySelectorAll('#detailVibeChipsTray .soothing-vibe-chip');
+  var vibeInput = document.getElementById('detailSelectedVibe');
+
+  vibeChips.forEach(function(chip) {
+    chip.addEventListener('click', function(e) {
+      e.preventDefault();
+      var v = this.getAttribute('data-vibe');
+      if (vibeInput.value === v) {
+        vibeInput.value = '';
+        this.classList.remove('active');
+      } else {
+        vibeInput.value = v;
+        vibeChips.forEach(function(vc) { vc.classList.remove('active'); });
+        this.classList.add('active');
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}
 

@@ -564,3 +564,103 @@ def rate(item_id):
 
     return redirect(request.referrer or url_for("items.detail", item_id=item_id))
 
+
+@bp.route("/<int:item_id>/submit-review", methods=["POST"])
+def submit_review(item_id):
+    """
+    Unified endpoint to submit both star rating and written review with a soothing UI.
+    Works seamlessly via AJAX JSON or standard HTML form submission.
+    """
+    is_ajax = request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    if g.user is None:
+        if is_ajax:
+            return jsonify({"success": False, "error": "Please log in to submit a review."}), 401
+        flash("Please log in to review this movie.")
+        return redirect(url_for("auth.login"))
+
+    db = get_db()
+    item = db.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    if item is None:
+        abort(404)
+
+    if request.is_json:
+        data = request.get_json() or {}
+        rating = int(data.get("rating", 0) or 0)
+        content = (data.get("content") or "").strip()
+        vibe_tag = (data.get("vibe_tag") or "").strip()
+    else:
+        rating = int(request.form.get("rating", 0) or 0)
+        content = (request.form.get("content") or "").strip()
+        vibe_tag = (request.form.get("vibe_tag") or "").strip()
+
+    if rating < 1 or rating > 5:
+        msg = "Please select a peaceful star rating between 1 and 5."
+        if is_ajax:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg)
+        return redirect(url_for("items.detail", item_id=item_id))
+
+    # 1. Upsert rating in user_preferences
+    db.execute(
+        """
+        INSERT INTO user_preferences (user_id, item_id, rating)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id, item_id) DO UPDATE SET rating = excluded.rating
+        """,
+        (g.user["id"], item_id, rating),
+    )
+
+    # 2. Insert review if content provided
+    new_post_id = None
+    score = 0.0
+    sentiment_text = "Mindful & Positive"
+    full_content = ""
+    if content:
+        full_content = f"[{vibe_tag}] {content}" if (vibe_tag and not content.startswith(f"[{vibe_tag}]")) else content
+        score = analyze(full_content)
+        sentiment_text = label(score)
+        cursor = db.execute(
+            """
+            INSERT INTO posts (user_id, item_id, content, sentiment_score)
+            VALUES (?, ?, ?, ?)
+            """,
+            (g.user["id"], item_id, full_content, score),
+        )
+        new_post_id = cursor.lastrowid
+
+    db.commit()
+
+    # Query fresh rating stats
+    new_stats = db.execute(
+        """
+        SELECT COALESCE(ROUND(AVG(rating), 1), 0) AS avg_rating,
+               COUNT(*) AS rating_count
+        FROM user_preferences
+        WHERE item_id = ?
+        """,
+        (item_id,),
+    ).fetchone()
+
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "message": f"Your peaceful review for '{item['title']}' has been recorded!",
+            "user_rating": rating,
+            "avg_rating": new_stats["avg_rating"],
+            "rating_count": new_stats["rating_count"],
+            "comment": {
+                "id": new_post_id,
+                "content": full_content if content else "",
+                "vibe_tag": vibe_tag,
+                "sentiment_score": score,
+                "sentiment_label": sentiment_text,
+                "username": g.user["username"],
+                "avatar_url": dict(g.user).get("avatar_url") or "",
+                "created_at_fmt": "Just now",
+            } if new_post_id else None
+        })
+
+    flash(f"Your peaceful review for '{item['title']}' has been recorded! (Sentiment: {sentiment_text})")
+    return redirect(url_for("items.detail", item_id=item_id))
+
+

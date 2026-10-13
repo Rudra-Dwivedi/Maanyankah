@@ -39,6 +39,11 @@
             </div>
             <span>Curated by <strong>@{{ collection['username'] }}</strong></span>
           </a>
+          {% if creator_badges and creator_badges.tier %}
+            <span class="badge-trust-tier {{ creator_badges.tier.badge_class }}" title="{{ creator_badges.tier.description }}">
+              {{ creator_badges.tier.icon }} {{ creator_badges.tier.name }}
+            </span>
+          {% endif %}
           <span class="meta-dot">•</span>
           <span class="meta-stat"><strong>{{ items|length }}</strong> {{ 'item' if items|length == 1 else 'items' }}</span>
           {% if movie_count > 0 %}
@@ -52,9 +57,23 @@
         </div>
       </div>
 
-      <!-- Owner Actions -->
-      {% if is_owner %}
-        <div class="collection-hero-actions">
+      <!-- Hero Actions (Follow / Bookmark, Remix, Edit) -->
+      <div class="collection-hero-actions">
+        <form method="post" action="{{ url_for('collections.bookmark', collection_id=collection['id']) }}" class="inline-form">
+          <button type="submit" class="btn btn-small {% if is_bookmarked %}btn-bookmarked{% else %}btn-ghost{% endif %}" title="Bookmark this collection">
+            🔖 {% if is_bookmarked %}Bookmarked ✓{% else %}Follow / Save{% endif %} ({{ bookmarks_count }})
+          </button>
+        </form>
+
+        {% if g.user and not is_owner %}
+          <form method="post" action="{{ url_for('collections.remix', collection_id=collection['id']) }}" class="inline-form" onsubmit="return confirm('Remix this playlist to create your own editable copy?');">
+            <button type="submit" class="btn btn-small btn-ghost" title="Remix this playlist into your own collections">
+              🔀 Remix Playlist
+            </button>
+          </form>
+        {% endif %}
+
+        {% if is_owner %}
           <button type="button" class="btn btn-small btn-ghost" id="openEditColBtn">
             ✏️ Edit Details
           </button>
@@ -63,8 +82,8 @@
               🗑️ Delete
             </button>
           </form>
-        </div>
-      {% endif %}
+        {% endif %}
+      </div>
     </div>
   </header>
 
@@ -198,6 +217,60 @@
         {% endfor %}
       </div>
     {% endif %}
+  </section>
+
+  <!-- Collection Discussion / Comments Section -->
+  <section class="collection-discussion-card">
+    <div class="discussion-head">
+      <div>
+        <h2 class="discussion-title">💬 Collection Discussion ({{ comments|length }})</h2>
+        <p class="text-muted-sm">Share thoughts on this playlist, suggest additions, and discuss with fellow curators.</p>
+      </div>
+    </div>
+
+    {% if g.user %}
+      <form method="post" action="{{ url_for('collections.add_comment', collection_id=collection['id']) }}" class="collection-comment-form">
+        <textarea name="content" rows="2" required placeholder="What do you think of this curated capsule? Add your perspective..."></textarea>
+        <div class="comment-submit-row">
+          <button type="submit" class="btn btn-small">Post Comment</button>
+        </div>
+      </form>
+    {% else %}
+      <div class="comment-login-prompt">
+        <p><a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to join the discussion on this collection.</p>
+      </div>
+    {% endif %}
+
+    <div class="discussion-comments-list">
+      {% if comments|length == 0 %}
+        <div class="empty-col text-muted-sm" style="padding: 1.5rem 0;">No comments yet. Start the conversation!</div>
+      {% endif %}
+      {% for c in comments %}
+        <div class="discussion-comment-item">
+          <div class="avatar avatar-sm avatar-{{ c.user_id % 3 }}">
+            {% if c.avatar_url %}
+              <img src="{{ c.avatar_url }}" alt="{{ c.username }}">
+            {% else %}
+              {{ c.username[0]|upper }}
+            {% endif %}
+          </div>
+          <div class="comment-bubble">
+            <div class="comment-author-line">
+              <a href="{{ url_for('recommend.profile', username=c.username) }}" class="comment-author-name">
+                @{{ c.username }}
+              </a>
+              {% if c.author_badges and c.author_badges.tier %}
+                <span class="badge-trust-tier {{ c.author_badges.tier.badge_class }}">
+                  {{ c.author_badges.tier.icon }} {{ c.author_badges.tier.name }}
+                </span>
+              {% endif %}
+              <time class="text-muted-sm">{{ c.created_at[:16] if c.created_at else '' }}</time>
+            </div>
+            <div class="comment-text-body">{{ c.content }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
   </section>
 
 </div>

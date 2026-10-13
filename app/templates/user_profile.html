@@ -31,6 +31,11 @@
           {% if profile_user['role'] == 'admin' %}
             <span class="admin-badge">admin</span>
           {% endif %}
+          {% if badges and badges.tier %}
+            <span class="badge-trust-tier {{ badges.tier.badge_class }}" title="{{ badges.tier.description }}">
+              {{ badges.tier.icon }} {{ badges.tier.name }}
+            </span>
+          {% endif %}
           {% if not profile_user['is_active'] %}
             <span class="status-pill status-suspended">Account Suspended</span>
           {% endif %}
@@ -87,6 +92,82 @@
       </div>
     </div>
   </div>
+
+  <!-- Milestone Badges Tray -->
+  {% if badges and badges.milestones and badges.milestones|length > 0 %}
+    <section class="profile-milestones-tray">
+      <div class="milestones-tray-header">
+        <h2 class="section-title-sm">🏅 Milestone Badges ({{ badges.milestones|length }})</h2>
+        <span class="text-muted-sm">Earned through ratings, collections, and community engagement</span>
+      </div>
+      <div class="milestones-grid">
+        {% for b in badges.milestones %}
+          <div class="milestone-badge-card" title="{{ b.description }}">
+            <span class="milestone-icon">{{ b.icon }}</span>
+            <div class="milestone-info">
+              <strong class="milestone-name">{{ b.name }}</strong>
+              <span class="milestone-desc">{{ b.description }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <!-- Taste Profile Breakdown -->
+  {% if taste_profile and taste_profile.has_data %}
+    <section class="profile-taste-card">
+      <div class="taste-card-header">
+        <div>
+          <span class="taste-badge-tag">🧬 TASTE DNA</span>
+          <h2 class="taste-archetype-title">{{ taste_profile.archetype }}</h2>
+          <span class="taste-stats-summary">{{ taste_profile.total_ratings }} rated experiences analyzed across the catalog</span>
+        </div>
+      </div>
+
+      <div class="taste-grid-2col">
+        <!-- Top Genres Progress -->
+        <div class="taste-genres-col">
+          <h3 class="taste-subhead">Top Genres & Atmospheres</h3>
+          <div class="taste-genres-bars">
+            {% for g in taste_profile.top_genres %}
+              <div class="taste-bar-row">
+                <div class="taste-bar-meta">
+                  <span class="taste-genre-name">{{ g.name }}</span>
+                  <span class="taste-genre-pct">{{ g.pct }}% ({{ g.count }})</span>
+                </div>
+                <div class="taste-bar-track">
+                  <div class="taste-bar-fill" style="width: {{ g.pct }}%;"></div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Favorite Creators & Category Split -->
+        <div class="taste-creators-col">
+          {% if taste_profile.favorite_artists and taste_profile.favorite_artists|length > 0 %}
+            <h3 class="taste-subhead">Favorite Directors & Creators</h3>
+            <div class="taste-creators-chips">
+              {% for a in taste_profile.favorite_artists %}
+                <span class="creator-chip">
+                  <span class="creator-name">🎬 {{ a.name }}</span>
+                  <span class="creator-count">{{ a.count }}</span>
+                </span>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <h3 class="taste-subhead" style="margin-top: 1rem;">Experience Distribution</h3>
+          <div class="category-split-row">
+            <span class="cat-split-chip">🎬 {{ taste_profile.category_split.movie }} Movies</span>
+            <span class="cat-split-chip">🎵 {{ taste_profile.category_split.song }} Tracks</span>
+            <span class="cat-split-chip">🏆 {{ taste_profile.category_split.team }} Teams</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  {% endif %}
 
   <!-- Curated Collections Section -->
   {% if collections and collections|length > 0 %}

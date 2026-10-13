@@ -95,3 +95,30 @@ CREATE TABLE IF NOT EXISTS collection_items (
     UNIQUE(collection_id, item_id)
 );
 
+-- Quick emoji reactions on community reviews/posts (🔥, ❤️, 👏, 🤯, 😡)
+CREATE TABLE IF NOT EXISTS post_reactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    reaction TEXT NOT NULL CHECK (reaction IN ('fire', 'love', 'insightful', 'mindblown', 'disagree')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, post_id)
+);
+
+-- Bookmarks / follows on curated collections
+CREATE TABLE IF NOT EXISTS collection_bookmarks (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(user_id, collection_id)
+);
+
+-- Community comments / discussions on collections
+CREATE TABLE IF NOT EXISTS collection_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+

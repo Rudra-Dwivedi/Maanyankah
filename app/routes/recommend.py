@@ -5,6 +5,7 @@ from app.auth_utils import login_required
 from app.services.recommender import similar_users, group_recommendation
 from app.services.item_media import resolve_image_url, with_image_urls
 from app.services.sentiment import label
+from app.services.gamification import get_user_badges, get_user_taste_profile
 
 bp = Blueprint("recommend", __name__, url_prefix="/recommend")
 
@@ -200,6 +201,9 @@ def profile(username):
             (user["id"],),
         ).fetchall()
 
+    badges = get_user_badges(db, user["id"])
+    taste_profile = get_user_taste_profile(db, user["id"])
+
     return render_template(
         "user_profile.html",
         profile_user=user,
@@ -209,6 +213,8 @@ def profile(username):
         following_count=following_count,
         is_following=is_following,
         collections=user_collections,
+        badges=badges,
+        taste_profile=taste_profile,
     )
 
 

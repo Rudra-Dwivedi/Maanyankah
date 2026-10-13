@@ -21,6 +21,7 @@ def create_app(config_class=Config):
     from app.routes.admin import bp as admin_bp
     from app.routes.agent import bp as agent_bp
     from app.routes.collections import bp as collections_bp
+    from app.routes.leaderboard import bp as leaderboard_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(items_bp)
@@ -30,6 +31,7 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp)
     app.register_blueprint(agent_bp)
     app.register_blueprint(collections_bp)
+    app.register_blueprint(leaderboard_bp)
 
     @app.route("/")
     def index():

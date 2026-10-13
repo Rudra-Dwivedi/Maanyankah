@@ -136,10 +136,21 @@
 
     <!-- Category Tabs -->
     <div class="filters" style="margin: 0; padding: 0;">
-      <a href="{{ url_for('items.browse', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) if (search_query or active_genre or min_rating or active_era or active_sort != 'newest') else url_for('items.browse') }}" class="{{ 'active' if not active_type }}">All</a>
-      <a href="{{ url_for('items.browse', type='movie', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'movie' }}">Movies 🎬</a>
-      <a href="{{ url_for('items.browse', type='song', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'song' }}">Music 🎵</a>
-      <a href="{{ url_for('items.browse', type='team', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'team' }}">Sports 🏆</a>
+      <a href="{{ url_for('items.browse', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) if (search_query or active_genre or min_rating or active_era or active_mood or active_sort != 'newest') else url_for('items.browse') }}" class="{{ 'active' if not active_type }}">All</a>
+      <a href="{{ url_for('items.browse', type='movie', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'movie' }}">Movies 🎬</a>
+      <a href="{{ url_for('items.browse', type='song', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'song' }}">Music 🎵</a>
+      <a href="{{ url_for('items.browse', type='team', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'team' }}">Sports 🏆</a>
+    </div>
+
+    <!-- Mood & Atmosphere Quick Filter Bar -->
+    <div class="mood-filter-bar">
+      <span class="mood-filter-title">Atmosphere:</span>
+      <a href="{{ url_for('items.browse', type=active_type, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if not active_mood }}">All Vibes</a>
+      <a href="{{ url_for('items.browse', type=active_type, mood='mind-bending', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'mind-bending' }}">🌌 Mind-Bending</a>
+      <a href="{{ url_for('items.browse', type=active_type, mood='feel-good', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'feel-good' }}">☀️ Feel-Good</a>
+      <a href="{{ url_for('items.browse', type=active_type, mood='adrenaline', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'adrenaline' }}">⚡ Adrenaline</a>
+      <a href="{{ url_for('items.browse', type=active_type, mood='peaceful', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'peaceful' }}">🌿 Peaceful</a>
+      <a href="{{ url_for('items.browse', type=active_type, mood='hidden-gem', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill mood-pill-gem {{ 'active' if active_mood == 'hidden-gem' }}">💎 Hidden Gems</a>
     </div>
 
     <!-- Filter Dropdowns Row -->
@@ -211,8 +222,9 @@
           {% set chip_genre = active_genre if chip.key != 'genre' else None %}
           {% set chip_min_rating = min_rating if chip.key != 'min_rating' else None %}
           {% set chip_era = active_era if chip.key != 'era' else None %}
+          {% set chip_mood = active_mood if chip.key != 'mood' else None %}
           {% set chip_sort = active_sort if chip.key != 'sort' else 'newest' %}
-          <a href="{{ url_for('items.browse', type=chip_type, q=chip_q, genre=chip_genre, min_rating=chip_min_rating, era=chip_era, sort=chip_sort) }}"
+          <a href="{{ url_for('items.browse', type=chip_type, q=chip_q, genre=chip_genre, min_rating=chip_min_rating, era=chip_era, mood=chip_mood, sort=chip_sort) }}"
              class="filter-chip"
              title="Remove {{ chip.label }}">
             <span>{{ chip.label }}</span>
@@ -224,12 +236,53 @@
     {% endif %}
   </form>
 
+  <!-- Personalized Recommendations Shelf (Collaborative Filtering) -->
+  {% if recommended_items and recommended_items|length > 0 and not has_active_filters %}
+    <section class="personal-recs-shelf" aria-label="Personalized Recommendations">
+      <div class="recs-shelf-header">
+        <div class="recs-title-group">
+          <span class="recs-badge">🎯 AI TASTE MATCH</span>
+          <h2 class="recs-heading">Recommended for You</h2>
+          <span class="recs-sub">Predicted picks tailored to your rating history and taste profile</span>
+        </div>
+      </div>
+      <div class="recs-scroll-grid">
+        {% for rec in recommended_items %}
+          <div class="rec-card">
+            <a href="{{ url_for('items.detail', item_id=rec.id) }}" target="_blank" rel="noopener noreferrer" class="rec-thumb-wrap">
+              {% if rec.image_url %}
+                <img src="{{ rec.image_url }}" alt="{{ rec.title }}" loading="lazy">
+              {% else %}
+                <div class="rec-placeholder">{% if rec.type == 'movie' %}🎬{% elif rec.type == 'song' %}🎵{% else %}🏆{% endif %}</div>
+              {% endif %}
+              <span class="rec-predicted-badge">★ Predicted {{ rec.predicted_rating }}</span>
+            </a>
+            <div class="rec-card-body">
+              <span class="rec-type-tag">{{ rec.type|upper }}</span>
+              <a href="{{ url_for('items.detail', item_id=rec.id) }}" target="_blank" rel="noopener noreferrer" class="rec-title-link">
+                <strong>{{ rec.title }}</strong>
+              </a>
+              <div class="rec-actions">
+                {% if rec.type == 'movie' %}
+                  <button type="button" class="btn-ghost btn-xs btn-movie-trailer-trigger" data-item-id="{{ rec.id }}" data-item-title="{{ rec.title }}">▶ Trailer</button>
+                  <button type="button" class="btn-ghost btn-xs btn-soothing-trigger" data-item-id="{{ rec.id }}" data-item-title="{{ rec.title }}">✍️ Review</button>
+                {% endif %}
+                <a href="{{ url_for('items.detail', item_id=rec.id) }}" class="btn-ghost btn-xs">Details ↗</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
   <!-- Results Summary Meta Bar -->
   <div class="search-results-meta">
     <span>
       Showing <strong class="search-results-count">{{ total_count }}</strong>
       {{ active_type or 'catalog' }} {{ 'item' if total_count == 1 else 'items' }}
       {% if search_query %}matching "<strong>{{ search_query }}</strong>"{% endif %}
+      {% if active_genre %} (Filtering by genre: <strong>{{ active_genre }}</strong>){% endif %}
     </span>
     {% if has_active_filters %}
       <a href="{{ url_for('items.browse', type=active_type) }}" style="color: var(--accent-movies); text-decoration: none; font-size: 0.78rem;">Clear filters</a>

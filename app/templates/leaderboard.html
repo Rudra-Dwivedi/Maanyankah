@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Community Leaderboard & Quests — मान्यांकः (Maanyankah){% endblock %}
+{% block content %}
+<div class="container page">
+
+  <div class="leaderboard-header-section">
+    <div class="leaderboard-title-group">
+      <span class="badge-accent">🏆 CULTURAL REPUTATION & QUESTS</span>
+      <h1 class="leaderboard-main-title">Community Hall of Fame</h1>
+      <p class="page-sub">Celebrating trusted critics, passionate curators, and resonant voices across the मान्यांकः (Maanyankah) community.</p>
+    </div>
+  </div>
+
+  <!-- Weekly Cultural Challenges Banner -->
+  <section class="weekly-quests-section">
+    <div class="quests-header-row">
+      <div class="quests-title-wrap">
+        <span class="quest-pulse-icon">🎯</span>
+        <div>
+          <h2 class="quests-heading">Weekly Discovery Quests</h2>
+          <span class="quests-sub">Active 7-day community challenge window. Complete quests to earn milestone reputation!</span>
+        </div>
+      </div>
+      {% if not g.user %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-small btn-ghost">Log in to track progress</a>
+      {% endif %}
+    </div>
+
+    <div class="quests-grid">
+      {% for q in challenges %}
+        <div class="quest-card {% if q.completed %}quest-completed{% endif %}">
+          <div class="quest-card-top">
+            <h3 class="quest-title">{{ q.title }}</h3>
+            {% if q.completed %}
+              <span class="quest-status-badge quest-badge-done">✓ Completed</span>
+            {% else %}
+              <span class="quest-status-badge quest-badge-active">In Progress</span>
+            {% endif %}
+          </div>
+          <p class="quest-desc">{{ q.description }}</p>
+
+          <div class="quest-progress-wrap">
+            <div class="quest-progress-track">
+              {% set pct = (q.current / q.target * 100)|round if q.target > 0 else 0 %}
+              <div class="quest-progress-fill" style="width: {{ pct }}%;"></div>
+            </div>
+            <div class="quest-progress-labels">
+              <span class="quest-progress-text"><strong>{{ q.current }}</strong> / {{ q.target }}</span>
+              <span class="quest-reward-pill">Reward: {{ q.badge_reward }}</span>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Leaderboards Grid (3 Pillars) -->
+  <div class="leaderboard-grid-3col">
+
+    <!-- Column 1: Top Reviewers -->
+    <div class="leaderboard-col-card">
+      <div class="col-card-header">
+        <div class="col-icon-badge">✍️</div>
+        <div>
+          <h2 class="col-title">Top Reviewers</h2>
+          <span class="col-sub">Catalog ratings & mindful reviews</span>
+        </div>
+      </div>
+
+      <div class="leaderboard-ranking-list">
+        {% if leaderboard.top_reviewers|length == 0 %}
+          <div class="empty-col">No reviewer records yet.</div>
+        {% endif %}
+        {% for u in leaderboard.top_reviewers %}
+          <div class="rank-item-row rank-item-{{ loop.index }}">
+            <div class="rank-number">
+              {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}#{{ loop.index }}{% endif %}
+            </div>
+
+            <a href="{{ url_for('recommend.profile', username=u.username) }}" class="rank-avatar-link">
+              <div class="avatar avatar-sm avatar-{{ u.id % 3 }}">
+                {% if u.avatar_url %}
+                  <img src="{{ u.avatar_url }}" alt="{{ u.username }}">
+                {% else %}
+                  {{ u.username[0]|upper }}
+                {% endif %}
+              </div>
+            </a>
+
+            <div class="rank-user-info">
+              <div class="rank-name-row">
+                <a href="{{ url_for('recommend.profile', username=u.username) }}" class="rank-username">
+                  @{{ u.username }}
+                </a>
+                {% if u.tier %}
+                  <span class="badge-trust-tier {{ u.tier.badge_class }}" title="{{ u.tier.description }}">
+                    {{ u.tier.icon }} {{ u.tier.name }}
+                  </span>
+                {% endif %}
+              </div>
+              <div class="rank-stats-sub">
+                <span>{{ u.ratings_count }} ratings</span> • <span>{{ u.reviews_count }} reviews</span>
+              </div>
+            </div>
+
+            <div class="rank-score-pill" title="Reviewer Score: ratings + (reviews * 2)">
+              <strong>{{ u.total_score }}</strong> pts
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Column 2: Top Curators -->
+    <div class="leaderboard-col-card">
+      <div class="col-card-header">
+        <div class="col-icon-badge">📁</div>
+        <div>
+          <h2 class="col-title">Master Curators</h2>
+          <span class="col-sub">Playlists created & bookmarks saved</span>
+        </div>
+      </div>
+
+      <div class="leaderboard-ranking-list">
+        {% if leaderboard.top_curators|length == 0 %}
+          <div class="empty-col">No public collections yet.</div>
+        {% endif %}
+        {% for c in leaderboard.top_curators %}
+          <div class="rank-item-row rank-item-{{ loop.index }}">
+            <div class="rank-number">
+              {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}#{{ loop.index }}{% endif %}
+            </div>
+
+            <a href="{{ url_for('recommend.profile', username=c.username) }}" class="rank-avatar-link">
+              <div class="avatar avatar-sm avatar-{{ c.id % 3 }}">
+                {% if c.avatar_url %}
+                  <img src="{{ c.avatar_url }}" alt="{{ c.username }}">
+                {% else %}
+                  {{ c.username[0]|upper }}
+                {% endif %}
+              </div>
+            </a>
+
+            <div class="rank-user-info">
+              <div class="rank-name-row">
+                <a href="{{ url_for('recommend.profile', username=c.username) }}" class="rank-username">
+                  @{{ c.username }}
+                </a>
+                {% if c.tier %}
+                  <span class="badge-trust-tier {{ c.tier.badge_class }}" title="{{ c.tier.description }}">
+                    {{ c.tier.icon }} {{ c.tier.name }}
+                  </span>
+                {% endif %}
+              </div>
+              <div class="rank-stats-sub">
+                <span>{{ c.collections_count }} collections</span> • <span>{{ c.bookmarks_received }} follows</span>
+              </div>
+            </div>
+
+            <div class="rank-score-pill" title="Curator Score: (collections * 3) + (follows * 2)">
+              <strong>{{ c.curator_score }}</strong> pts
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Column 3: Most Resonant -->
+    <div class="leaderboard-col-card">
+      <div class="col-card-header">
+        <div class="col-icon-badge">🔥</div>
+        <div>
+          <h2 class="col-title">Most Resonant</h2>
+          <span class="col-sub">Emotional engagement & community reactions</span>
+        </div>
+      </div>
+
+      <div class="leaderboard-ranking-list">
+        {% if leaderboard.most_appreciated|length == 0 %}
+          <div class="empty-col">No reactions received yet.</div>
+        {% endif %}
+        {% for a in leaderboard.most_appreciated %}
+          <div class="rank-item-row rank-item-{{ loop.index }}">
+            <div class="rank-number">
+              {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}#{{ loop.index }}{% endif %}
+            </div>
+
+            <a href="{{ url_for('recommend.profile', username=a.username) }}" class="rank-avatar-link">
+              <div class="avatar avatar-sm avatar-{{ a.id % 3 }}">
+                {% if a.avatar_url %}
+                  <img src="{{ a.avatar_url }}" alt="{{ a.username }}">
+                {% else %}
+                  {{ a.username[0]|upper }}
+                {% endif %}
+              </div>
+            </a>
+
+            <div class="rank-user-info">
+              <div class="rank-name-row">
+                <a href="{{ url_for('recommend.profile', username=a.username) }}" class="rank-username">
+                  @{{ a.username }}
+                </a>
+                {% if a.tier %}
+                  <span class="badge-trust-tier {{ a.tier.badge_class }}" title="{{ a.tier.description }}">
+                    {{ a.tier.icon }} {{ a.tier.name }}
+                  </span>
+                {% endif %}
+              </div>
+              <div class="rank-stats-sub">
+                <span>Received community fire & love</span>
+              </div>
+            </div>
+
+            <div class="rank-score-pill" title="Total reactions received on reviews">
+              <strong>{{ a.reactions_received }}</strong> 🔥
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

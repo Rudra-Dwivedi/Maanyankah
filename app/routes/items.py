@@ -6,6 +6,8 @@ from app.auth_utils import login_required
 from app.services.item_media import with_image_urls, resolve_image_url
 from app.services.sentiment import analyze, label
 from app.services.movie_agent import MOVIE_KNOWLEDGE_BASE, SONG_KNOWLEDGE_BASE, resolve_movie_trailer
+from app.services.gamification import detect_polarization, get_user_badges, get_weekly_challenges
+from app.services.recommender import predict_rating
 
 bp = Blueprint("items", __name__, url_prefix="/items")
 
@@ -96,6 +98,7 @@ def browse():
     min_rating = request.args.get("min_rating", "").strip().lower()
     active_sort = request.args.get("sort", "newest").strip().lower()
     active_era = request.args.get("era", "").strip().lower()
+    active_mood = request.args.get("mood", "").strip().lower()
 
     db = get_db()
 
@@ -119,7 +122,7 @@ def browse():
         for t in sorted(genre_counts.keys())
     ]
 
-    # Build SQL query with optional type, genre, search, and era filtering
+    # Build SQL query with optional type, genre, search, era, and mood filtering
     where_clauses = []
     params = []
 
@@ -146,9 +149,19 @@ def browse():
         elif active_era in ("classic", "older"):
             where_clauses.append("(i.metadata LIKE '%\"release_date\": \"19%' OR i.metadata LIKE '%\"release_date\":\"19%')")
 
+    if active_mood:
+        if active_mood == "mind-bending":
+            where_clauses.append("(LOWER(i.genre_tags) LIKE '%sci-fi%' OR LOWER(i.genre_tags) LIKE '%thriller%' OR LOWER(i.genre_tags) LIKE '%mystery%')")
+        elif active_mood == "feel-good":
+            where_clauses.append("(LOWER(i.genre_tags) LIKE '%musical%' OR LOWER(i.genre_tags) LIKE '%comedy%' OR LOWER(i.genre_tags) LIKE '%pop%' OR LOWER(i.genre_tags) LIKE '%dance%' OR LOWER(i.genre_tags) LIKE '%disco%')")
+        elif active_mood == "adrenaline":
+            where_clauses.append("(LOWER(i.genre_tags) LIKE '%action%' OR LOWER(i.genre_tags) LIKE '%crime%' OR LOWER(i.genre_tags) LIKE '%rock%' OR LOWER(i.genre_tags) LIKE '%hip-hop%' OR LOWER(i.genre_tags) LIKE '%cricket%' OR LOWER(i.genre_tags) LIKE '%football%' OR LOWER(i.genre_tags) LIKE '%basketball%')")
+        elif active_mood == "peaceful":
+            where_clauses.append("(LOWER(i.genre_tags) LIKE '%drama%' OR LOWER(i.genre_tags) LIKE '%romance%' OR LOWER(i.genre_tags) LIKE '%classic%' OR LOWER(i.genre_tags) LIKE '%r&b%')")
+
     where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
 
-    # Build HAVING clause for community rating threshold
+    # Build HAVING clause for community rating threshold & hidden gems
     having_clauses = []
     if min_rating:
         if min_rating in ("4", "4.0", "4+"):
@@ -159,6 +172,9 @@ def browse():
             having_clauses.append("COALESCE(ROUND(AVG(p.rating), 1), 0) >= 2.0 AND COUNT(p.rating) > 0")
         elif min_rating == "unrated":
             having_clauses.append("COUNT(p.rating) = 0")
+
+    if active_mood == "hidden-gem":
+        having_clauses.append("COALESCE(ROUND(AVG(p.rating), 1), 0) >= 4.0 AND COUNT(p.rating) BETWEEN 1 AND 5")
 
     having_sql = ("HAVING " + " AND ".join(having_clauses)) if having_clauses else ""
 
@@ -210,6 +226,8 @@ def browse():
 
     user_ratings = {}
     user_collections = []
+    recommended_items = []
+
     if g.user is not None:
         rows = db.execute(
             "SELECT item_id, rating FROM user_preferences WHERE user_id = ?",
@@ -221,6 +239,34 @@ def browse():
             "SELECT id, title FROM collections WHERE user_id = ? ORDER BY title ASC",
             (g.user["id"],),
         ).fetchall()
+
+        # Compute personalized recommendations for unrated items
+        unrated_rows = db.execute(
+            """
+            SELECT i.*,
+                   COALESCE(ROUND(AVG(p.rating), 1), 0) AS avg_rating,
+                   COUNT(p.rating) AS rating_count
+            FROM items i
+            LEFT JOIN user_preferences p ON i.id = p.item_id
+            WHERE i.id NOT IN (SELECT item_id FROM user_preferences WHERE user_id = ?)
+            GROUP BY i.id
+            """,
+            (g.user["id"],),
+        ).fetchall()
+
+        rec_candidates = []
+        for r in unrated_rows:
+            pred_score = predict_rating(g.user["id"], r["id"])
+            if pred_score >= 3.0:
+                rd = dict(r)
+                rd["predicted_rating"] = round(pred_score, 1)
+                raw_tags = rd.get("genre_tags") or ""
+                rd["parsed_genres"] = [t.strip() for t in raw_tags.split(",") if t.strip()]
+                rec_candidates.append(rd)
+        rec_candidates.sort(key=lambda x: (x["predicted_rating"], x["avg_rating"]), reverse=True)
+        recommended_items = with_image_urls(rec_candidates[:6])
+
+    weekly_challenges = get_weekly_challenges(db, g.user["id"] if g.user else None)
 
     # Query latest movies for the dynamic flash spotlight section (only on default/unfiltered view or movie tab)
     latest_movie_rows = db.execute(
@@ -261,10 +307,19 @@ def browse():
         active_chips.append({"key": "min_rating", "label": f"Rating: {r_lbl}"})
     if active_era:
         active_chips.append({"key": "era", "label": f"Era: {active_era.upper()}"})
+    if active_mood:
+        mood_map = {
+            "mind-bending": "Atmosphere: 🌌 Mind-Bending",
+            "feel-good": "Atmosphere: ☀️ Feel-Good",
+            "adrenaline": "Atmosphere: ⚡ Adrenaline",
+            "peaceful": "Atmosphere: 🌿 Peaceful",
+            "hidden-gem": "Discovery: 💎 Hidden Gems",
+        }
+        active_chips.append({"key": "mood", "label": mood_map.get(active_mood, f"Mood: {active_mood.title()}")})
     if active_sort and active_sort != "newest":
         active_chips.append({"key": "sort", "label": f"Sort: {sort_labels.get(active_sort, active_sort)}"})
 
-    has_active_filters = bool(search_query or active_genre or min_rating or active_era or (active_sort != "newest"))
+    has_active_filters = bool(search_query or active_genre or min_rating or active_era or active_mood or (active_sort != "newest"))
 
     return render_template(
         "items.html",
@@ -275,10 +330,13 @@ def browse():
         min_rating=min_rating,
         active_sort=active_sort,
         active_era=active_era,
+        active_mood=active_mood,
         sort_labels=sort_labels,
         available_genres=available_genres,
         user_ratings=user_ratings,
         user_collections=user_collections,
+        recommended_items=recommended_items,
+        weekly_challenges=weekly_challenges,
         new_movie=new_movie,
         latest_movies=latest_movies,
         active_chips=active_chips,
@@ -346,11 +404,53 @@ def detail(item_id):
         (item_id, item_dict["title"]),
     ).fetchall()
 
+    post_ids = [c["id"] for c in comment_rows]
+    comment_reactions = {pid: {"fire": 0, "love": 0, "insightful": 0, "mindblown": 0, "disagree": 0} for pid in post_ids}
+    user_comment_reactions = {}
+    if post_ids:
+        ph = ",".join("?" * len(post_ids))
+        reaction_counts = db.execute(
+            f"""
+            SELECT post_id, reaction, COUNT(*) as c
+            FROM post_reactions
+            WHERE post_id IN ({ph})
+            GROUP BY post_id, reaction
+            """,
+            post_ids,
+        ).fetchall()
+        for rc in reaction_counts:
+            pid = rc["post_id"]
+            rxn = rc["reaction"]
+            if pid in comment_reactions and rxn in comment_reactions[pid]:
+                comment_reactions[pid][rxn] = rc["c"]
+
+        if g.user is not None:
+            user_rxn_rows = db.execute(
+                f"""
+                SELECT post_id, reaction
+                FROM post_reactions
+                WHERE user_id = ? AND post_id IN ({ph})
+                """,
+                [g.user["id"]] + post_ids,
+            ).fetchall()
+            for ur in user_rxn_rows:
+                user_comment_reactions[ur["post_id"]] = ur["reaction"]
+
+    user_badge_cache = {}
     comments = []
     for c in comment_rows:
         cd = dict(c)
         cd["sentiment_label"] = label(cd["sentiment_score"])
+        uid = cd["user_id"]
+        if uid not in user_badge_cache:
+            user_badge_cache[uid] = get_user_badges(db, uid)
+        cd["author_badges"] = user_badge_cache[uid]
+        cd["reactions"] = comment_reactions.get(cd["id"], {"fire": 0, "love": 0, "insightful": 0, "mindblown": 0, "disagree": 0})
+        cd["total_reactions"] = sum(cd["reactions"].values())
+        cd["user_reaction"] = user_comment_reactions.get(cd["id"])
         comments.append(cd)
+
+    polarization = detect_polarization(dict(rating_stats) if rating_stats else {})
 
     # Related items of the same type
     related_rows = db.execute(
@@ -373,6 +473,7 @@ def detail(item_id):
         item=item_dict,
         details=details,
         stats=dict(rating_stats) if rating_stats else {},
+        polarization=polarization,
         user_rating=user_rating,
         user_collections=user_collections,
         comments=comments,
@@ -416,12 +517,19 @@ def quick_view(item_id):
         """
         SELECT 
             COALESCE(ROUND(AVG(rating), 1), 0) AS avg_rating,
-            COUNT(*) AS rating_count
+            COUNT(*) AS rating_count,
+            SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) AS stars_5,
+            SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) AS stars_4,
+            SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) AS stars_3,
+            SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) AS stars_2,
+            SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) AS stars_1
         FROM user_preferences
         WHERE item_id = ?
         """,
         (item_id,),
     ).fetchone()
+
+    polarization = detect_polarization(dict(rating_stats) if rating_stats else {})
 
     user_rating = None
     if g.user is not None:
@@ -470,6 +578,7 @@ def quick_view(item_id):
         "themes": details["themes"],
         "avg_rating": rating_stats["avg_rating"] if rating_stats else 0,
         "rating_count": rating_stats["rating_count"] if rating_stats else 0,
+        "polarization": polarization,
         "user_rating": user_rating,
         "trailer": trailer_info,
         "comments": comments,

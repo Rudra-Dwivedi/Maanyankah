@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, g, fla
 from app.db import get_db
 from app.auth_utils import login_required
 from app.services.item_media import with_image_urls
+from app.services.gamification import get_user_badges
 
 bp = Blueprint("collections", __name__, url_prefix="/collections")
 
@@ -52,13 +53,15 @@ def index():
         """
         SELECT c.*,
                u.username, u.avatar_url,
-               COUNT(ci.id) AS item_count,
+               COUNT(DISTINCT ci.id) AS item_count,
+               COUNT(DISTINCT cb.user_id) AS bookmarks_count,
                SUM(CASE WHEN i.type = 'movie' THEN 1 ELSE 0 END) AS movie_count,
                SUM(CASE WHEN i.type = 'song' THEN 1 ELSE 0 END) AS song_count
         FROM collections c
         JOIN users u ON c.user_id = u.id
         LEFT JOIN collection_items ci ON c.id = ci.collection_id
         LEFT JOIN items i ON ci.item_id = i.id
+        LEFT JOIN collection_bookmarks cb ON c.id = cb.collection_id
         WHERE c.is_public = 1
         GROUP BY c.id
         ORDER BY c.updated_at DESC
@@ -71,13 +74,15 @@ def index():
             """
             SELECT c.*,
                    u.username, u.avatar_url,
-                   COUNT(ci.id) AS item_count,
+                   COUNT(DISTINCT ci.id) AS item_count,
+                   COUNT(DISTINCT cb.user_id) AS bookmarks_count,
                    SUM(CASE WHEN i.type = 'movie' THEN 1 ELSE 0 END) AS movie_count,
                    SUM(CASE WHEN i.type = 'song' THEN 1 ELSE 0 END) AS song_count
             FROM collections c
             JOIN users u ON c.user_id = u.id
             LEFT JOIN collection_items ci ON c.id = ci.collection_id
             LEFT JOIN items i ON ci.item_id = i.id
+            LEFT JOIN collection_bookmarks cb ON c.id = cb.collection_id
             WHERE c.user_id = ?
             GROUP BY c.id
             ORDER BY c.updated_at DESC
@@ -176,6 +181,24 @@ def detail(collection_id):
     if not collection["is_public"] and not is_owner:
         abort(403)
 
+    # Bookmarks count and status
+    bookmarks_count = db.execute(
+        "SELECT COUNT(*) FROM collection_bookmarks WHERE collection_id = ?",
+        (collection_id,),
+    ).fetchone()[0]
+
+    is_bookmarked = False
+    if g.user is not None:
+        is_bookmarked = bool(
+            db.execute(
+                "SELECT 1 FROM collection_bookmarks WHERE collection_id = ? AND user_id = ?",
+                (collection_id, g.user["id"]),
+            ).fetchone()
+        )
+
+    # Creator badges
+    creator_badges = get_user_badges(db, collection["user_id"])
+
     # Fetch items in collection
     items = db.execute(
         """
@@ -213,6 +236,24 @@ def detail(collection_id):
         ).fetchall()
         user_ratings = {r["item_id"]: r["rating"] for r in rows}
 
+    # Discussion comments on this collection
+    comment_rows = db.execute(
+        """
+        SELECT cc.*, u.username, u.avatar_url, u.role AS user_role
+        FROM collection_comments cc
+        JOIN users u ON cc.user_id = u.id
+        WHERE cc.collection_id = ?
+        ORDER BY cc.created_at ASC
+        """,
+        (collection_id,),
+    ).fetchall()
+
+    comments = []
+    for cr in comment_rows:
+        cd = dict(cr)
+        cd["author_badges"] = get_user_badges(db, cd["user_id"])
+        comments.append(cd)
+
     # If owner, fetch catalog items not yet in collection for quick search & add
     catalog_items = []
     if is_owner:
@@ -241,6 +282,10 @@ def detail(collection_id):
         catalog_items=catalog_items,
         movie_count=movie_count,
         song_count=song_count,
+        bookmarks_count=bookmarks_count,
+        is_bookmarked=is_bookmarked,
+        creator_badges=creator_badges,
+        comments=comments,
     )
 
 
@@ -448,4 +493,102 @@ def api_toggle_item():
         "message": msg,
         "collection_title": collection["title"],
     })
+
+
+@bp.route("/<int:collection_id>/bookmark", methods=["POST"])
+@login_required
+def bookmark(collection_id):
+    """Toggle bookmarking / following a collection."""
+    db = get_db()
+    existing = db.execute(
+        "SELECT 1 FROM collection_bookmarks WHERE collection_id = ? AND user_id = ?",
+        (collection_id, g.user["id"]),
+    ).fetchone()
+
+    if existing:
+        db.execute(
+            "DELETE FROM collection_bookmarks WHERE collection_id = ? AND user_id = ?",
+            (collection_id, g.user["id"]),
+        )
+        is_bookmarked = False
+        msg = "Collection removed from your bookmarks."
+    else:
+        db.execute(
+            "INSERT OR IGNORE INTO collection_bookmarks (collection_id, user_id) VALUES (?, ?)",
+            (collection_id, g.user["id"]),
+        )
+        is_bookmarked = True
+        msg = "Collection saved to your bookmarks!"
+
+    db.commit()
+
+    count = db.execute(
+        "SELECT COUNT(*) FROM collection_bookmarks WHERE collection_id = ?",
+        (collection_id,),
+    ).fetchone()[0]
+
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "is_bookmarked": is_bookmarked, "count": count, "message": msg})
+
+    flash(msg)
+    return redirect(url_for("collections.detail", collection_id=collection_id))
+
+
+@bp.route("/<int:collection_id>/remix", methods=["POST"])
+@login_required
+def remix(collection_id):
+    """Clone/remix an existing public collection into current user's profile."""
+    db = get_db()
+    col = db.execute(
+        "SELECT * FROM collections WHERE id = ?", (collection_id,)
+    ).fetchone()
+    if col is None:
+        abort(404)
+    if not col["is_public"] and col["user_id"] != g.user["id"] and g.user["role"] != "admin":
+        abort(403)
+
+    new_title = f"{col['title']} (Remix)"
+    new_desc = f"Remixed from playlist: {col['description'] or ''}".strip()
+
+    cursor = db.cursor()
+    cursor.execute(
+        "INSERT INTO collections (user_id, title, description, is_public) VALUES (?, ?, ?, 1)",
+        (g.user["id"], new_title, new_desc),
+    )
+    new_cid = cursor.lastrowid
+
+    cursor.execute(
+        """
+        INSERT INTO collection_items (collection_id, item_id, note)
+        SELECT ?, item_id, note FROM collection_items WHERE collection_id = ?
+        """,
+        (new_cid, collection_id),
+    )
+    db.commit()
+
+    flash(f"Playlist remixed as '{new_title}' in your collections! You can now customize it.")
+    return redirect(url_for("collections.detail", collection_id=new_cid))
+
+
+@bp.route("/<int:collection_id>/comment", methods=["POST"])
+@login_required
+def add_comment(collection_id):
+    """Post a comment/discussion on a public collection."""
+    db = get_db()
+    col = db.execute("SELECT * FROM collections WHERE id = ?", (collection_id,)).fetchone()
+    if col is None:
+        abort(404)
+
+    content = request.form.get("content", "").strip()
+    if not content:
+        flash("Comment cannot be empty.")
+    else:
+        db.execute(
+            "INSERT INTO collection_comments (collection_id, user_id, content) VALUES (?, ?, ?)",
+            (collection_id, g.user["id"], content),
+        )
+        db.commit()
+        flash("Discussion comment posted!")
+
+    return redirect(url_for("collections.detail", collection_id=collection_id))
 

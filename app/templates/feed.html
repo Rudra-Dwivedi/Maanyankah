@@ -10,6 +10,29 @@
     </div>
   </div>
 
+  <!-- Community Sentiment Pulse Bar -->
+  {% if mood_summary %}
+    <section class="community-mood-bar-card" aria-label="Community Sentiment Pulse">
+      <div class="mood-bar-top">
+        <div class="mood-status-label">
+          <span class="mood-pulse-dot"></span>
+          <span class="mood-pulse-heading">Community Mood Pulse: <strong>{{ mood_summary.vibe }}</strong></span>
+        </div>
+        <span class="mood-meta-analyzed">Real-time analysis over {{ mood_summary.total_analyzed }} recent posts</span>
+      </div>
+      <div class="mood-multi-track">
+        <div class="mood-track-segment mood-seg-pos" style="width: {{ mood_summary.pos_pct }}%;" title="{{ mood_summary.pos_pct }}% Loved / Positive"></div>
+        <div class="mood-track-segment mood-seg-neu" style="width: {{ mood_summary.neu_pct }}%;" title="{{ mood_summary.neu_pct }}% Balanced / Neutral"></div>
+        <div class="mood-track-segment mood-seg-crit" style="width: {{ mood_summary.crit_pct }}%;" title="{{ mood_summary.crit_pct }}% Critical Takes"></div>
+      </div>
+      <div class="mood-labels-row">
+        <span class="mood-legend-chip chip-pos">✨ {{ mood_summary.pos_pct }}% Loved</span>
+        <span class="mood-legend-chip chip-neu">⚖️ {{ mood_summary.neu_pct }}% Neutral</span>
+        <span class="mood-legend-chip chip-crit">💥 {{ mood_summary.crit_pct }}% Critical</span>
+      </div>
+    </section>
+  {% endif %}
+
   <div class="feed-layout-grid">
     <!-- Main Stream Column -->
     <div class="feed-stream-col">
@@ -124,6 +147,11 @@
                   {% if post.user_role == 'admin' %}
                     <span class="admin-badge-sm">Admin</span>
                   {% endif %}
+                  {% if post.author_badges and post.author_badges.tier %}
+                    <span class="badge-trust-tier {{ post.author_badges.tier.badge_class }}" title="{{ post.author_badges.tier.description }}">
+                      {{ post.author_badges.tier.icon }} {{ post.author_badges.tier.name }}
+                    </span>
+                  {% endif %}
                 </div>
                 <time class="post-time-stamp" title="{{ post.created_at }}">
                   {{ post.created_at[:16] if post.created_at else '' }}
@@ -179,12 +207,30 @@
               </div>
             {% endif %}
 
-            <!-- Interactive Post Action Bar -->
+            <!-- Interactive Post Action Bar with 5 Reaction Emojis -->
             <div class="feed-card-footer">
-              <button type="button" class="post-action-btn like-btn" onclick="toggleLike(this)">
-                <span class="like-icon">🤍</span>
-                <span class="like-counter"></span>
-              </button>
+              <div class="feed-reactions-group" id="reactions-post-{{ post.id }}">
+                <button type="button" class="post-rxn-btn {% if post.user_reaction == 'fire' %}rxn-active{% endif %}" onclick="sendReaction({{ post.id }}, 'fire', this)" title="🔥 Fire / Hype">
+                  <span class="rxn-icon">🔥</span>
+                  <span class="rxn-cnt">{{ post.reactions.fire if post.reactions.fire > 0 else '' }}</span>
+                </button>
+                <button type="button" class="post-rxn-btn {% if post.user_reaction == 'love' %}rxn-active{% endif %}" onclick="sendReaction({{ post.id }}, 'love', this)" title="❤️ Love this">
+                  <span class="rxn-icon">❤️</span>
+                  <span class="rxn-cnt">{{ post.reactions.love if post.reactions.love > 0 else '' }}</span>
+                </button>
+                <button type="button" class="post-rxn-btn {% if post.user_reaction == 'insightful' %}rxn-active{% endif %}" onclick="sendReaction({{ post.id }}, 'insightful', this)" title="👏 Insightful review">
+                  <span class="rxn-icon">👏</span>
+                  <span class="rxn-cnt">{{ post.reactions.insightful if post.reactions.insightful > 0 else '' }}</span>
+                </button>
+                <button type="button" class="post-rxn-btn {% if post.user_reaction == 'mindblown' %}rxn-active{% endif %}" onclick="sendReaction({{ post.id }}, 'mindblown', this)" title="🤯 Mind Blown">
+                  <span class="rxn-icon">🤯</span>
+                  <span class="rxn-cnt">{{ post.reactions.mindblown if post.reactions.mindblown > 0 else '' }}</span>
+                </button>
+                <button type="button" class="post-rxn-btn {% if post.user_reaction == 'disagree' %}rxn-active{% endif %}" onclick="sendReaction({{ post.id }}, 'disagree', this)" title="😡 Spicy take / Disagree">
+                  <span class="rxn-icon">😡</span>
+                  <span class="rxn-cnt">{{ post.reactions.disagree if post.reactions.disagree > 0 else '' }}</span>
+                </button>
+              </div>
 
               <button type="button" class="post-action-btn share-btn" onclick="copyPostLink(this)">
                 <span>🔗</span>
@@ -265,17 +311,43 @@
     });
   });
 
-  // Client-side heart toggle
-  function toggleLike(btn) {
-    const icon = btn.querySelector('.like-icon');
-    const counter = btn.querySelector('.like-counter');
-    const isLiked = btn.classList.toggle('liked');
-    if (isLiked) {
-      icon.textContent = '❤️';
-      counter.textContent = '1';
-    } else {
-      icon.textContent = '🤍';
-      counter.textContent = '';
+  // Send / toggle emoji reaction via AJAX
+  async function sendReaction(postId, rxnType, btn) {
+    {% if not g.user %}
+      window.location.href = "{{ url_for('auth.login') }}";
+      return;
+    {% endif %}
+
+    try {
+      const res = await fetch(`/feed/${postId}/react`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ reaction: rxnType })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const group = document.getElementById(`reactions-post-${postId}`);
+        if (group) {
+          const types = ['fire', 'love', 'insightful', 'mindblown', 'disagree'];
+          const btns = group.querySelectorAll('.post-rxn-btn');
+          btns.forEach((b, idx) => {
+            const t = types[idx];
+            const cntSpan = b.querySelector('.rxn-cnt');
+            const count = data.reactions[t] || 0;
+            cntSpan.textContent = count > 0 ? count : '';
+            if (data.user_reaction === t) {
+              b.classList.add('rxn-active');
+            } else {
+              b.classList.remove('rxn-active');
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to react:", err);
     }
   }
 

@@ -29,6 +29,7 @@
         <a href="{{ url_for('collections.index') }}">Collections</a>
         <a href="{{ url_for('agent.index') }}" title="चित्राङ्कः (Chitrankah) - RAG AI Cinema & Ratings Agent">चित्राङ्कः (Chitrankah)</a>
         <a href="{{ url_for('feed.feed') }}">Feed</a>
+        <a href="{{ url_for('leaderboard.index') }}">Leaderboard 🏆</a>
         {% if g.user %}
           <a href="{{ url_for('recommend.people') }}">Find people</a>
           <a href="{{ url_for('recommend.group') }}">Group pick</a>

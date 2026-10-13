@@ -267,6 +267,11 @@
                     {% if c.user_role == 'admin' %}
                       <span class="chip-admin-xs">ADMIN</span>
                     {% endif %}
+                    {% if c.author_badges and c.author_badges.tier %}
+                      <span class="badge-trust-tier {{ c.author_badges.tier.badge_class }}" title="{{ c.author_badges.tier.description }}">
+                        {{ c.author_badges.tier.icon }} {{ c.author_badges.tier.name }}
+                      </span>
+                    {% endif %}
                     <span class="comment-date text-muted-sm">{{ c.created_at[:16] if c.created_at else '' }}</span>
                     {% if c.sentiment_label %}
                       <span class="sentiment-pill sentiment-{{ c.sentiment_label }}">
@@ -276,6 +281,29 @@
                   </div>
                   <div class="comment-body">
                     {{ c.content }}
+                  </div>
+                  <!-- Emoji reactions on reviews -->
+                  <div class="feed-reactions-group comment-rxn-bar" id="reactions-post-{{ c.id }}">
+                    <button type="button" class="post-rxn-btn {% if c.user_reaction == 'fire' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'fire', this)" title="🔥 Fire / Hype">
+                      <span class="rxn-icon">🔥</span>
+                      <span class="rxn-cnt">{{ c.reactions.fire if c.reactions.fire > 0 else '' }}</span>
+                    </button>
+                    <button type="button" class="post-rxn-btn {% if c.user_reaction == 'love' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'love', this)" title="❤️ Love this">
+                      <span class="rxn-icon">❤️</span>
+                      <span class="rxn-cnt">{{ c.reactions.love if c.reactions.love > 0 else '' }}</span>
+                    </button>
+                    <button type="button" class="post-rxn-btn {% if c.user_reaction == 'insightful' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'insightful', this)" title="👏 Insightful review">
+                      <span class="rxn-icon">👏</span>
+                      <span class="rxn-cnt">{{ c.reactions.insightful if c.reactions.insightful > 0 else '' }}</span>
+                    </button>
+                    <button type="button" class="post-rxn-btn {% if c.user_reaction == 'mindblown' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'mindblown', this)" title="🤯 Mind Blown">
+                      <span class="rxn-icon">🤯</span>
+                      <span class="rxn-cnt">{{ c.reactions.mindblown if c.reactions.mindblown > 0 else '' }}</span>
+                    </button>
+                    <button type="button" class="post-rxn-btn {% if c.user_reaction == 'disagree' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'disagree', this)" title="😡 Hot take / Disagree">
+                      <span class="rxn-icon">😡</span>
+                      <span class="rxn-cnt">{{ c.reactions.disagree if c.reactions.disagree > 0 else '' }}</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -309,6 +337,14 @@
             Based on <strong>{{ stats.rating_count or 0 }}</strong> community {{ 'rating' if stats.rating_count == 1 else 'ratings' }}
           </div>
         </div>
+
+        <!-- Polarization & Community Perception Badge -->
+        {% if polarization %}
+          <div class="polarization-badge-box {{ polarization.badge_class }}">
+            <div class="polarization-badge-label">{{ polarization.label }}</div>
+            <div class="polarization-badge-desc">{{ polarization.description }}</div>
+          </div>
+        {% endif %}
 
         <!-- Star Distribution Breakdown -->
         <div class="star-bars-distribution">
@@ -427,6 +463,76 @@
       }
     });
   });
+
+  // Offline draft auto-save and restore for movie reviews
+  var reviewTextarea = document.getElementById('detailReviewContent');
+  var draftKey = 'draft_review_{{ item.id }}';
+  if (reviewTextarea) {
+    try {
+      var savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft && !reviewTextarea.value) {
+        reviewTextarea.value = savedDraft;
+        var hint = document.createElement('div');
+        hint.className = 'offline-draft-indicator';
+        hint.innerHTML = '💾 <span>Offline draft restored</span> <button type="button" class="btn-clear-draft">Clear</button>';
+        hint.querySelector('.btn-clear-draft').onclick = function() {
+          localStorage.removeItem(draftKey);
+          reviewTextarea.value = '';
+          hint.remove();
+        };
+        reviewTextarea.parentNode.insertBefore(hint, reviewTextarea.nextSibling);
+      }
+      reviewTextarea.addEventListener('input', function() {
+        localStorage.setItem(draftKey, this.value);
+      });
+      var form = reviewTextarea.closest('form');
+      if (form) {
+        form.addEventListener('submit', function() {
+          localStorage.removeItem(draftKey);
+        });
+      }
+    } catch (e) {}
+  }
+
+  // Live emoji reaction toggle via AJAX
+  window.sendReaction = async function(postId, rxnType, btn) {
+    {% if not g.user %}
+      window.location.href = "{{ url_for('auth.login') }}";
+      return;
+    {% endif %}
+
+    try {
+      const res = await fetch(`/feed/${postId}/react`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ reaction: rxnType })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const group = document.getElementById(`reactions-post-${postId}`);
+        if (group) {
+          const types = ['fire', 'love', 'insightful', 'mindblown', 'disagree'];
+          const btns = group.querySelectorAll('.post-rxn-btn');
+          btns.forEach((b, idx) => {
+            const t = types[idx];
+            const cntSpan = b.querySelector('.rxn-cnt');
+            const count = data.reactions[t] || 0;
+            cntSpan.textContent = count > 0 ? count : '';
+            if (data.user_reaction === t) {
+              b.classList.add('rxn-active');
+            } else {
+              b.classList.remove('rxn-active');
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to react:", err);
+    }
+  };
 })();
 </script>
 {% endblock %}

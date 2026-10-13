@@ -25,3 +25,4 @@ def index():
         leaderboard=data,
         challenges=challenges,
     )
+

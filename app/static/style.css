@@ -4,6 +4,7 @@
   --surface: #171a22;
   --surface-raised: #1d212b;
   --border: #262a35;
+  --border-subtle: rgba(255, 255, 255, 0.08);
 
   --text-primary: #f2f1ed;
   --text-muted: #9ca0af;
@@ -27,6 +28,7 @@
   --surface: #ffffff;
   --surface-raised: #ebedf2;
   --border: #d4d9e2;
+  --border-subtle: rgba(0, 0, 0, 0.08);
 
   --text-primary: #12151d;
   --text-muted: #5e6678;
@@ -73,22 +75,32 @@ h1, h2, h3 {
 
 p { color: var(--text-muted); margin: 0 0 1em; }
 
-.container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
-.page { padding-top: 2.5rem; padding-bottom: 3rem; }
-.page h1 { font-size: 1.8rem; color: var(--text-primary); }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 1.25rem; }
+.page { padding-top: 1.25rem; padding-bottom: 2.5rem; }
+.page h1 { font-size: 1.6rem; color: var(--text-primary); margin-bottom: 0.25rem; }
+.page-sub { font-size: 0.88rem; margin-bottom: 0.75rem; }
 
 /* ---------- Header ---------- */
 .site-header {
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-ink);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+  background: rgba(18, 20, 26, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+[data-theme="light"] .site-header {
+  background: rgba(255, 255, 255, 0.88);
 }
 .site-header-inner {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 1.1rem 1.5rem;
+  padding: 0.65rem 1.25rem;
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 .brand {
   font-family: "Noto Serif Devanagari", var(--font-display);
@@ -9493,4 +9505,504 @@ body.soothing-modal-open {
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
+}
+
+/* ==========================================================================
+   UI Compactness, Unified Command Bar, Density Switcher & Tabbed Layout
+   ========================================================================== */
+
+/* ---------- Unified Compact Command Bar ---------- */
+.unified-command-bar {
+  margin-bottom: 0.85rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle, var(--border));
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.command-bar-main-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.command-bar-main-row .search-input-wrapper {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+.command-category-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, var(--border));
+}
+
+.command-category-tabs a {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.command-category-tabs a:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.command-category-tabs a.active {
+  color: #12141a;
+  background: #f2f1ed;
+  font-weight: 600;
+}
+
+[data-theme="light"] .command-category-tabs a.active {
+  color: #ffffff;
+  background: #171a22;
+}
+
+/* Filters Drawer Toggle Button */
+.btn-filters-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle, var(--border));
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-filters-toggle:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-filters-toggle.has-active-filters {
+  color: var(--accent-movies);
+  border-color: rgba(232, 184, 75, 0.4);
+  background: rgba(232, 184, 75, 0.1);
+}
+
+.active-filters-count-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--accent-movies);
+  color: #12141a;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Density View Switcher */
+.density-switch-group {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle, var(--border));
+  border-radius: 6px;
+  padding: 0.15rem;
+  margin-left: auto;
+}
+
+.btn-density-opt {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  width: 28px;
+  height: 26px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-density-opt:hover {
+  color: var(--text-primary);
+}
+
+.btn-density-opt.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="light"] .btn-density-opt.active {
+  background: #ffffff;
+  color: #12151d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Collapsible Filters Drawer */
+.collapsible-filters-drawer {
+  display: none;
+  padding-top: 0.75rem;
+  margin-top: 0.65rem;
+  border-top: 1px solid var(--border-subtle, var(--border));
+  animation: drawerSlideDown 0.2s ease both;
+}
+
+.collapsible-filters-drawer.drawer-open {
+  display: block;
+}
+
+@keyframes drawerSlideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Flash Spotlight Banner Compaction ---------- */
+.flash-spotlight-banner {
+  padding: 0.5rem 0.9rem;
+  margin-bottom: 0.85rem;
+  border-radius: 10px;
+}
+
+.flash-slides-wrapper {
+  min-height: 80px;
+}
+
+.flash-poster-thumb {
+  width: 64px !important;
+  height: 88px !important;
+}
+
+.flash-item-title {
+  font-size: 1.15rem !important;
+  margin-bottom: 0.2rem !important;
+}
+
+/* ---------- Catalog Density Modes ---------- */
+
+/* 1. COMPACT POSTER GRID MODE (Letterboxd Style) */
+#catalog-grid[data-density="compact"] {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+#catalog-grid[data-density="compact"] .item-card {
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+#catalog-grid[data-density="compact"] .item-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+#catalog-grid[data-density="compact"] .media-floating-badges {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 5;
+  pointer-events: none;
+}
+
+#catalog-grid[data-density="compact"] .media-type-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(18, 20, 26, 0.85);
+  backdrop-filter: blur(6px);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#catalog-grid[data-density="compact"] .media-score-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(18, 20, 26, 0.85);
+  backdrop-filter: blur(6px);
+  color: #f5c518;
+  border: 1px solid rgba(245, 197, 24, 0.25);
+}
+
+/* Hover Quick-Action Drawer in Compact Mode */
+#catalog-grid[data-density="compact"] .media-hover-drawer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  padding: 0.45rem;
+  background: linear-gradient(180deg, transparent 0%, rgba(18, 20, 26, 0.95) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transform: translateY(105%);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#catalog-grid[data-density="compact"] .item-media:hover .media-hover-drawer {
+  transform: translateY(0);
+}
+
+#catalog-grid[data-density="compact"] .btn-hover-action {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+#catalog-grid[data-density="compact"] .btn-hover-action:hover {
+  background: var(--accent-movies);
+  color: #12141a;
+  transform: scale(1.1);
+}
+
+#catalog-grid[data-density="compact"] .item-card-body {
+  padding: 0.5rem 0.65rem 0.65rem;
+}
+
+#catalog-grid[data-density="compact"] .item-card-body h3 {
+  font-size: 0.85rem;
+  margin: 0 0 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#catalog-grid[data-density="compact"] .item-type-row,
+#catalog-grid[data-density="compact"] .item-avg-score-row,
+#catalog-grid[data-density="compact"] .item-card-actions-row {
+  display: none;
+}
+
+#catalog-grid[data-density="compact"] .item-genres-tray {
+  margin-bottom: 0.35rem;
+}
+
+#catalog-grid[data-density="compact"] .genre-tag-chip {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.35rem;
+}
+
+#catalog-grid[data-density="compact"] .star-rating label {
+  font-size: 0.85rem;
+}
+
+#catalog-grid[data-density="compact"] .user-rated-pill {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.35rem;
+}
+
+/* 2. DENSE LIST VIEW MODE */
+#catalog-grid[data-density="list"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+#catalog-grid[data-density="list"] .item-card {
+  flex-direction: row;
+  align-items: center;
+  padding: 0.45rem 0.85rem;
+  gap: 1rem;
+  min-height: 52px;
+  border-radius: 6px;
+}
+
+#catalog-grid[data-density="list"] .item-media {
+  width: 44px;
+  height: 44px;
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+#catalog-grid[data-density="list"] .media-floating-badges,
+#catalog-grid[data-density="list"] .media-hover-drawer,
+#catalog-grid[data-density="list"] .poster-trailer-overlay {
+  display: none !important;
+}
+
+#catalog-grid[data-density="list"] .item-card-body {
+  flex: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+#catalog-grid[data-density="list"] .item-type-row {
+  margin: 0;
+  order: 1;
+}
+
+#catalog-grid[data-density="list"] h3 {
+  font-size: 0.92rem;
+  margin: 0;
+  order: 2;
+  min-width: 170px;
+}
+
+#catalog-grid[data-density="list"] .item-genres-tray {
+  margin: 0;
+  order: 3;
+}
+
+#catalog-grid[data-density="list"] .item-avg-score-row {
+  margin: 0;
+  order: 4;
+  font-size: 0.82rem;
+}
+
+#catalog-grid[data-density="list"] .rate-form {
+  margin: 0;
+  order: 5;
+}
+
+#catalog-grid[data-density="list"] .item-card-actions-row {
+  margin: 0;
+  order: 6;
+}
+
+/* Hide floating elements in Cozy mode */
+#catalog-grid[data-density="cozy"] .media-floating-badges,
+#catalog-grid[data-density="cozy"] .media-hover-drawer {
+  display: none;
+}
+
+/* Category Hover Card Glows */
+.item-card-movie:hover {
+  border-color: rgba(232, 184, 75, 0.45);
+  box-shadow: 0 6px 20px -4px rgba(232, 184, 75, 0.16);
+  transform: translateY(-2px);
+}
+
+.item-card-song:hover {
+  border-color: rgba(79, 209, 197, 0.45);
+  box-shadow: 0 6px 20px -4px rgba(79, 209, 197, 0.16);
+  transform: translateY(-2px);
+}
+
+.item-card-team:hover {
+  border-color: rgba(232, 93, 75, 0.45);
+  box-shadow: 0 6px 20px -4px rgba(232, 93, 75, 0.16);
+  transform: translateY(-2px);
+}
+
+/* AJAX Instant Rating Toast */
+.ajax-rate-toast {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #34d399;
+  margin-left: 0.35rem;
+  animation: toastPop 0.25s ease both;
+}
+
+@keyframes toastPop {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ---------- Tabbed Item Detail Layout ---------- */
+.detail-nav-tabs {
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 1.15rem;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+  padding-bottom: 0.5rem;
+  overflow-x: auto;
+}
+
+.detail-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.detail-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.detail-tab-btn.active {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-subtle, var(--border));
+  font-weight: 600;
+}
+
+[data-theme="light"] .detail-tab-btn.active {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.tab-badge-cnt {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.detail-tab-pane {
+  display: none;
+}
+
+.detail-tab-pane.active {
+  display: block;
+  animation: tabFadeIn 0.22s ease both;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.detail-sidebar {
+  position: sticky;
+  top: 72px;
+  align-self: flex-start;
 }

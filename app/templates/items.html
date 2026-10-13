@@ -108,14 +108,14 @@
   {% endif %}
 
 
-  <!-- Search & Multi-Faceted Filter Console -->
-  <form method="get" action="{{ url_for('items.browse') }}" class="search-filter-panel" id="catalog-search-form">
+  <!-- Unified Compact Command Toolbar -->
+  <form method="get" action="{{ url_for('items.browse') }}" class="search-filter-panel unified-command-bar" id="catalog-search-form">
     {% if active_type %}
       <input type="hidden" name="type" value="{{ active_type }}">
     {% endif %}
 
-    <!-- Top Row: Search Input -->
-    <div class="search-bar-row">
+    <!-- Top Command Row: Search + Category Segments + Drawer Toggle + Density Switcher -->
+    <div class="command-bar-main-row">
       <div class="search-input-wrapper">
         <span class="search-input-icon">🔍</span>
         <input type="text"
@@ -123,93 +123,113 @@
                id="catalog-search-input"
                class="search-input-field"
                value="{{ search_query }}"
-               placeholder="{% if active_type == 'movie' %}Search movies by title, actors, overview, or keywords...{% elif active_type == 'song' %}Search music by song title, artist, or album...{% elif active_type == 'team' %}Search teams by name, league, or sport...{% else %}Search movies, music, and sports by title, genre, keyword...{% endif %}"
+               placeholder="{% if active_type == 'movie' %}Search movies, actors, keywords...{% elif active_type == 'song' %}Search music, artist, album...{% elif active_type == 'team' %}Search teams, league...{% else %}Search movies, music, sports...{% endif %}"
                autocomplete="off">
         {% if search_query %}
           <button type="button" class="search-clear-btn" id="btn-clear-search-text" title="Clear search text">✕</button>
         {% endif %}
       </div>
-      <button type="submit" class="btn-search-submit">
+      <button type="submit" class="btn-search-submit" title="Run search">
         <span>Search</span>
       </button>
+
+      <!-- Category Segment Tabs -->
+      <div class="filters command-category-tabs" style="margin: 0; padding: 0;">
+        <a href="{{ url_for('items.browse', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) if (search_query or active_genre or min_rating or active_era or active_mood or active_sort != 'newest') else url_for('items.browse') }}" class="{{ 'active' if not active_type }}">All</a>
+        <a href="{{ url_for('items.browse', type='movie', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'movie' }}">Movies 🎬</a>
+        <a href="{{ url_for('items.browse', type='song', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'song' }}">Music 🎵</a>
+        <a href="{{ url_for('items.browse', type='team', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'team' }}">Sports 🏆</a>
+      </div>
+
+      <!-- Filters Drawer Toggle -->
+      <button type="button" class="btn-filters-toggle {{ 'has-active-filters' if has_active_filters or active_mood }}" id="btn-toggle-filters-drawer" aria-expanded="{{ 'true' if (has_active_filters or active_mood) else 'false' }}" title="Toggle filters and atmosphere options">
+        <span class="filters-toggle-label">⚙️ Filters</span>
+        {% if active_chips and active_chips|length > 0 %}
+          <span class="active-filters-count-pill">{{ active_chips|length }}</span>
+        {% else %}
+          <span class="filters-toggle-chevron">▾</span>
+        {% endif %}
+      </button>
+
+      <!-- Density View Switcher (Compact Poster Grid / Cozy Cards / Dense List) -->
+      <div class="density-switch-group" role="group" aria-label="Catalog Display Density">
+        <button type="button" class="btn-density-opt" data-density="compact" title="Compact Poster Mode (High Density, Letterboxd style)">⊞</button>
+        <button type="button" class="btn-density-opt active" data-density="cozy" title="Cozy Card Mode (Standard)">▦</button>
+        <button type="button" class="btn-density-opt" data-density="list" title="Dense List Mode (Table Rows)">☰</button>
+      </div>
     </div>
 
-    <!-- Category Tabs -->
-    <div class="filters" style="margin: 0; padding: 0;">
-      <a href="{{ url_for('items.browse', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) if (search_query or active_genre or min_rating or active_era or active_mood or active_sort != 'newest') else url_for('items.browse') }}" class="{{ 'active' if not active_type }}">All</a>
-      <a href="{{ url_for('items.browse', type='movie', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'movie' }}">Movies 🎬</a>
-      <a href="{{ url_for('items.browse', type='song', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'song' }}">Music 🎵</a>
-      <a href="{{ url_for('items.browse', type='team', mood=active_mood, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="{{ 'active' if active_type == 'team' }}">Sports 🏆</a>
-    </div>
-
-    <!-- Mood & Atmosphere Quick Filter Bar -->
-    <div class="mood-filter-bar">
-      <span class="mood-filter-title">Atmosphere:</span>
-      <a href="{{ url_for('items.browse', type=active_type, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if not active_mood }}">All Vibes</a>
-      <a href="{{ url_for('items.browse', type=active_type, mood='mind-bending', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'mind-bending' }}">🌌 Mind-Bending</a>
-      <a href="{{ url_for('items.browse', type=active_type, mood='feel-good', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'feel-good' }}">☀️ Feel-Good</a>
-      <a href="{{ url_for('items.browse', type=active_type, mood='adrenaline', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'adrenaline' }}">⚡ Adrenaline</a>
-      <a href="{{ url_for('items.browse', type=active_type, mood='peaceful', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'peaceful' }}">🌿 Peaceful</a>
-      <a href="{{ url_for('items.browse', type=active_type, mood='hidden-gem', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill mood-pill-gem {{ 'active' if active_mood == 'hidden-gem' }}">💎 Hidden Gems</a>
-    </div>
-
-    <!-- Filter Dropdowns Row -->
-    <div class="filter-controls-row">
-      <!-- Genre Dropdown -->
-      <div class="filter-select-group">
-        <label for="filter-genre" class="filter-select-label">Genre</label>
-        <select name="genre" id="filter-genre" class="filter-dropdown" onchange="this.form.submit()">
-          <option value="">All Genres</option>
-          {% for g in available_genres %}
-            <option value="{{ g.tag }}" {{ 'selected' if active_genre == g.tag }}>{{ g.label }} ({{ g.count }})</option>
-          {% endfor %}
-        </select>
+    <!-- Collapsible Filters Drawer: Atmosphere Moods + Filter Dropdowns -->
+    <div class="collapsible-filters-drawer {{ 'drawer-open' if (has_active_filters or active_mood or active_genre or min_rating or active_era) }}" id="filters-drawer-panel">
+      <!-- Mood & Atmosphere Quick Filter Bar -->
+      <div class="mood-filter-bar">
+        <span class="mood-filter-title">Atmosphere:</span>
+        <a href="{{ url_for('items.browse', type=active_type, q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if not active_mood }}">All Vibes</a>
+        <a href="{{ url_for('items.browse', type=active_type, mood='mind-bending', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'mind-bending' }}">🌌 Mind-Bending</a>
+        <a href="{{ url_for('items.browse', type=active_type, mood='feel-good', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'feel-good' }}">☀️ Feel-Good</a>
+        <a href="{{ url_for('items.browse', type=active_type, mood='adrenaline', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'adrenaline' }}">⚡ Adrenaline</a>
+        <a href="{{ url_for('items.browse', type=active_type, mood='peaceful', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill {{ 'active' if active_mood == 'peaceful' }}">🌿 Peaceful</a>
+        <a href="{{ url_for('items.browse', type=active_type, mood='hidden-gem', q=search_query, genre=active_genre, min_rating=min_rating, era=active_era, sort=active_sort) }}" class="mood-pill mood-pill-gem {{ 'active' if active_mood == 'hidden-gem' }}">💎 Hidden Gems</a>
       </div>
 
-      <!-- Min Community Rating Dropdown -->
-      <div class="filter-select-group">
-        <label for="filter-min-rating" class="filter-select-label">Community Rating</label>
-        <select name="min_rating" id="filter-min-rating" class="filter-dropdown" onchange="this.form.submit()">
-          <option value="" {{ 'selected' if not min_rating }}>★ All Ratings</option>
-          <option value="4" {{ 'selected' if min_rating == '4' }}>★ 4.0 & above (Top Rated)</option>
-          <option value="3" {{ 'selected' if min_rating == '3' }}>★ 3.0 & above</option>
-          <option value="2" {{ 'selected' if min_rating == '2' }}>★ 2.0 & above</option>
-          <option value="unrated" {{ 'selected' if min_rating == 'unrated' }}>Unrated / Be First</option>
-        </select>
-      </div>
-
-      <!-- Release Era Dropdown (Especially useful for movies) -->
-      <div class="filter-select-group">
-        <label for="filter-era" class="filter-select-label">Release Era</label>
-        <select name="era" id="filter-era" class="filter-dropdown" onchange="this.form.submit()">
-          <option value="" {{ 'selected' if not active_era }}>All Eras / Years</option>
-          <option value="2020s" {{ 'selected' if active_era == '2020s' }}>2020s & 2026 (Modern)</option>
-          <option value="2010s" {{ 'selected' if active_era == '2010s' }}>2010s</option>
-          <option value="2000s" {{ 'selected' if active_era == '2000s' }}>2000s</option>
-          <option value="classic" {{ 'selected' if active_era in ('classic', 'older') }}>1990s & Older (Classics)</option>
-        </select>
-      </div>
-
-      <!-- Sort Order Dropdown -->
-      <div class="filter-select-group">
-        <label for="filter-sort" class="filter-select-label">Sort Order</label>
-        <select name="sort" id="filter-sort" class="filter-dropdown" onchange="this.form.submit()">
-          <option value="newest" {{ 'selected' if active_sort == 'newest' }}>Recently Added</option>
-          <option value="highest_rated" {{ 'selected' if active_sort == 'highest_rated' }}>Highest Rated (★)</option>
-          <option value="most_reviewed" {{ 'selected' if active_sort == 'most_reviewed' }}>Most Discussed</option>
-          <option value="title_asc" {{ 'selected' if active_sort == 'title_asc' }}>Title (A → Z)</option>
-          <option value="title_desc" {{ 'selected' if active_sort == 'title_desc' }}>Title (Z → A)</option>
-          <option value="release_date" {{ 'selected' if active_sort == 'release_date' }}>Release Date</option>
-        </select>
-      </div>
-
-      {% if has_active_filters %}
-        <div style="margin-left: auto; align-self: flex-end; padding-bottom: 2px;">
-          <a href="{{ url_for('items.browse', type=active_type) }}" class="btn-clear-all-filters" title="Reset all search queries and filters">
-            ↺ Reset Filters
-          </a>
+      <!-- Filter Dropdowns Row -->
+      <div class="filter-controls-row">
+        <!-- Genre Dropdown -->
+        <div class="filter-select-group">
+          <label for="filter-genre" class="filter-select-label">Genre</label>
+          <select name="genre" id="filter-genre" class="filter-dropdown" onchange="this.form.submit()">
+            <option value="">All Genres</option>
+            {% for g in available_genres %}
+              <option value="{{ g.tag }}" {{ 'selected' if active_genre == g.tag }}>{{ g.label }} ({{ g.count }})</option>
+            {% endfor %}
+          </select>
         </div>
-      {% endif %}
+
+        <!-- Min Community Rating Dropdown -->
+        <div class="filter-select-group">
+          <label for="filter-min-rating" class="filter-select-label">Community Rating</label>
+          <select name="min_rating" id="filter-min-rating" class="filter-dropdown" onchange="this.form.submit()">
+            <option value="" {{ 'selected' if not min_rating }}>★ All Ratings</option>
+            <option value="4" {{ 'selected' if min_rating == '4' }}>★ 4.0 & above (Top Rated)</option>
+            <option value="3" {{ 'selected' if min_rating == '3' }}>★ 3.0 & above</option>
+            <option value="2" {{ 'selected' if min_rating == '2' }}>★ 2.0 & above</option>
+            <option value="unrated" {{ 'selected' if min_rating == 'unrated' }}>Unrated / Be First</option>
+          </select>
+        </div>
+
+        <!-- Release Era Dropdown -->
+        <div class="filter-select-group">
+          <label for="filter-era" class="filter-select-label">Release Era</label>
+          <select name="era" id="filter-era" class="filter-dropdown" onchange="this.form.submit()">
+            <option value="" {{ 'selected' if not active_era }}>All Eras / Years</option>
+            <option value="2020s" {{ 'selected' if active_era == '2020s' }}>2020s & 2026 (Modern)</option>
+            <option value="2010s" {{ 'selected' if active_era == '2010s' }}>2010s</option>
+            <option value="2000s" {{ 'selected' if active_era == '2000s' }}>2000s</option>
+            <option value="classic" {{ 'selected' if active_era in ('classic', 'older') }}>1990s & Older (Classics)</option>
+          </select>
+        </div>
+
+        <!-- Sort Order Dropdown -->
+        <div class="filter-select-group">
+          <label for="filter-sort" class="filter-select-label">Sort Order</label>
+          <select name="sort" id="filter-sort" class="filter-dropdown" onchange="this.form.submit()">
+            <option value="newest" {{ 'selected' if active_sort == 'newest' }}>Recently Added</option>
+            <option value="highest_rated" {{ 'selected' if active_sort == 'highest_rated' }}>Highest Rated (★)</option>
+            <option value="most_reviewed" {{ 'selected' if active_sort == 'most_reviewed' }}>Most Discussed</option>
+            <option value="title_asc" {{ 'selected' if active_sort == 'title_asc' }}>Title (A → Z)</option>
+            <option value="title_desc" {{ 'selected' if active_sort == 'title_desc' }}>Title (Z → A)</option>
+            <option value="release_date" {{ 'selected' if active_sort == 'release_date' }}>Release Date</option>
+          </select>
+        </div>
+
+        {% if has_active_filters %}
+          <div style="margin-left: auto; align-self: flex-end; padding-bottom: 2px;">
+            <a href="{{ url_for('items.browse', type=active_type) }}" class="btn-clear-all-filters" title="Reset all search queries and filters">
+              ↺ Reset Filters
+            </a>
+          </div>
+        {% endif %}
+      </div>
     </div>
 
     <!-- Active Filter Badges / Dismissible Chips -->
@@ -321,11 +341,17 @@
     </div>
   {% endif %}
 
-  <div class="item-grid">
+  <div class="item-grid" id="catalog-grid" data-density="cozy">
     {% for item in items %}
       {% set current = user_ratings.get(item['id']) %}
       <div class="item-card item-card-{{ item['type'] }}" data-item-id="{{ item['id'] }}">
         <div class="item-media">
+          <!-- Floating Overlay Badges for Compact Mode -->
+          <div class="media-floating-badges">
+            <span class="media-type-badge media-badge-{{ item['type'] }}">{{ item['type']|upper }}</span>
+            <span class="media-score-badge" id="media-score-{{ item['id'] }}">★ {{ item['avg_rating'] if item['rating_count'] > 0 else '—' }}</span>
+          </div>
+
           {% if item['type'] == 'movie' %}
             <div class="item-media-link item-poster-trailer-btn" data-item-id="{{ item['id'] }}" data-item-title="{{ item['title'] }}" title="▶ Watch {{ item['title'] }} Trailer" style="cursor: pointer;">
               {% if item.image_url %}
@@ -349,7 +375,20 @@
               {% endif %}
             </a>
           {% endif %}
+
+          <!-- Compact Mode Quick Hover Drawer -->
+          <div class="media-hover-drawer">
+            {% if item['type'] == 'movie' %}
+              <button type="button" class="btn-hover-action item-poster-trailer-btn" data-item-id="{{ item['id'] }}" data-item-title="{{ item['title'] }}" title="Watch trailer">▶</button>
+              <button type="button" class="btn-hover-action btn-soothing-trigger" data-item-id="{{ item['id'] }}" data-item-title="{{ item['title'] }}" title="Write review">✍️</button>
+            {% endif %}
+            {% if g.user and item['type'] in ('movie', 'song') %}
+              <button type="button" class="btn-hover-action btn-item-collection-quick" data-item-id="{{ item['id'] }}" data-item-title="{{ item['title'] }}" data-item-type="{{ item['type'] }}" title="Add to collection">📁</button>
+            {% endif %}
+            <a href="{{ url_for('items.detail', item_id=item['id']) }}" target="_blank" rel="noopener noreferrer" class="btn-hover-action" title="Open details in new tab">↗</a>
+          </div>
         </div>
+
         <div class="item-card-body">
           <div class="item-type-row">
             <span class="item-type">{{ item['type'] }}</span>
@@ -379,10 +418,12 @@
           <div class="item-avg-score-row" title="Community Average Rating">
             {% if item['rating_count'] > 0 %}
               <span class="star-gold">★</span>
-              <strong class="item-avg-num">{{ item['avg_rating'] }}</strong>
-              <span class="item-rating-count">({{ item['rating_count'] }} {% if item['rating_count'] == 1 %}rating{% else %}ratings{% endif %})</span>
+              <strong class="item-avg-num" id="item-avg-num-{{ item['id'] }}">{{ item['avg_rating'] }}</strong>
+              <span class="item-rating-count" id="item-rating-cnt-{{ item['id'] }}">({{ item['rating_count'] }} {% if item['rating_count'] == 1 %}rating{% else %}ratings{% endif %})</span>
             {% else %}
-              <span class="item-rating-none">No ratings yet</span>
+              <span class="item-rating-none" id="item-rating-none-{{ item['id'] }}">No ratings yet</span>
+              <strong class="item-avg-num" id="item-avg-num-{{ item['id'] }}" style="display: none;"></strong>
+              <span class="item-rating-count" id="item-rating-cnt-{{ item['id'] }}" style="display: none;"></span>
             {% endif %}
           </div>
 
@@ -396,20 +437,22 @@
               ↗ Reviews & Details
             </a>
           </div>
+
           {% if g.user %}
-            <form method="post" action="{{ url_for('items.rate', item_id=item['id']) }}" class="rate-form">
+            <form method="post" action="{{ url_for('items.rate', item_id=item['id']) }}" class="rate-form ajax-rate-form" data-item-id="{{ item['id'] }}">
               <div class="star-rating-wrap">
-                <div class="star-rating" title="Select 1-5 stars">
+                <div class="star-rating" title="Click 1-5 stars to rate instantly">
                   {% for r in [5, 4, 3, 2, 1] %}
-                    <input type="radio" id="r{{ r }}-{{ item['id'] }}" name="rating" value="{{ r }}" {{ 'checked' if current == r }}>
+                    <input type="radio" id="r{{ r }}-{{ item['id'] }}" name="rating" value="{{ r }}" class="ajax-star-input" data-item-id="{{ item['id'] }}" {{ 'checked' if current == r }}>
                     <label for="r{{ r }}-{{ item['id'] }}" title="{{ r }} star{% if r > 1 %}s{% endif %}">★</label>
                   {% endfor %}
                 </div>
-                {% if current %}
-                  <span class="user-rated-pill" title="Your current rating: {{ current }} / 5">★ {{ current }}/5</span>
-                {% endif %}
+                <span class="user-rated-pill ajax-rate-pill" id="user-pill-{{ item['id'] }}" style="{{ 'display: inline-flex;' if current else 'display: none;' }}">
+                  ★ {{ current }}/5
+                </span>
+                <span class="ajax-rate-toast" id="rate-toast-{{ item['id'] }}" style="display: none;">✓</span>
               </div>
-              <button type="submit" class="btn-ghost">{{ 'Update' if current else 'Rate' }}</button>
+              <button type="submit" class="btn-ghost btn-rate-submit-fallback" style="display: none;">{{ 'Update' if current else 'Rate' }}</button>
             </form>
           {% endif %}
         </div>
@@ -1414,6 +1457,106 @@
       }
     });
   }
+
+  // 1. Catalog Display Density Switcher (Compact / Cozy / List)
+  var catalogGrid = document.getElementById('catalog-grid');
+  var densityBtns = document.querySelectorAll('.btn-density-opt');
+  var savedDensity = 'cozy';
+  try { savedDensity = localStorage.getItem('fn_catalog_density') || 'cozy'; } catch(e) {}
+
+  function applyDensity(density) {
+    if (catalogGrid) {
+      catalogGrid.setAttribute('data-density', density);
+    }
+    densityBtns.forEach(function(btn) {
+      if (btn.getAttribute('data-density') === density) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    try { localStorage.setItem('fn_catalog_density', density); } catch(e) {}
+  }
+  applyDensity(savedDensity);
+
+  densityBtns.forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var targetDensity = this.getAttribute('data-density') || 'cozy';
+      applyDensity(targetDensity);
+    });
+  });
+
+  // 2. Collapsible Filters Drawer Toggle
+  var drawerToggleBtn = document.getElementById('btn-toggle-filters-drawer');
+  var drawerPanel = document.getElementById('filters-drawer-panel');
+  if (drawerToggleBtn && drawerPanel) {
+    drawerToggleBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var isOpen = drawerPanel.classList.toggle('drawer-open');
+      drawerToggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+  }
+
+  // 3. Instant 1-Click AJAX Star Rating
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.classList.contains('ajax-star-input')) {
+      var radio = e.target;
+      var itemId = radio.getAttribute('data-item-id');
+      var ratingVal = parseInt(radio.value, 10);
+      if (!itemId || !ratingVal) return;
+
+      var pill = document.getElementById('user-pill-' + itemId);
+      var toast = document.getElementById('rate-toast-' + itemId);
+      var avgNum = document.getElementById('item-avg-num-' + itemId);
+      var ratingCnt = document.getElementById('item-rating-cnt-' + itemId);
+      var ratingNone = document.getElementById('item-rating-none-' + itemId);
+      var mediaScore = document.getElementById('media-score-' + itemId);
+
+      // Optimistic update
+      if (pill) {
+        pill.innerText = '★ ' + ratingVal + '/5';
+        pill.style.display = 'inline-flex';
+      }
+      if (toast) {
+        toast.innerText = '✓';
+        toast.style.display = 'inline-block';
+        setTimeout(function() { toast.style.display = 'none'; }, 2000);
+      }
+
+      // Fire AJAX request
+      fetch('/items/' + itemId + '/rate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ rating: ratingVal })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data && data.success) {
+          if (avgNum) {
+            avgNum.innerText = data.avg_rating;
+            avgNum.style.display = 'inline';
+          }
+          if (ratingCnt) {
+            ratingCnt.innerText = '(' + data.rating_count + ' ' + (data.rating_count === 1 ? 'rating' : 'ratings') + ')';
+            ratingCnt.style.display = 'inline';
+          }
+          if (ratingNone) {
+            ratingNone.style.display = 'none';
+          }
+          if (mediaScore) {
+            mediaScore.innerText = '★ ' + data.avg_rating;
+          }
+        }
+      })
+      .catch(function(err) {
+        console.error('Rating update failed:', err);
+      });
+    }
+  });
 
   function escapeHtml(text) {
     if (!text) return '';

@@ -18,7 +18,7 @@
   <!-- Hero Section -->
   <section class="item-detail-hero item-hero-{{ item.type }}">
     <div class="detail-poster-col">
-      <div class="detail-poster-wrap {% if item.type == 'movie' and trailer %}detail-poster-clickable{% endif %}" {% if item.type == 'movie' and trailer %}onclick="document.getElementById('trailer-section')?.scrollIntoView({behavior: 'smooth'})" title="Click to view Official Trailer" style="cursor: pointer;"{% endif %}>
+      <div class="detail-poster-wrap {% if item.type == 'movie' and trailer %}detail-poster-clickable{% endif %}" {% if item.type == 'movie' and trailer %}onclick="window.switchDetailTab ? window.switchDetailTab('pane-trailer') : document.getElementById('trailer-section')?.scrollIntoView({behavior: 'smooth'})" title="Click to view Official Trailer" style="cursor: pointer;"{% endif %}>
         {% if item.image_url %}
           <img src="{{ item.image_url }}" alt="{{ item.title }}" class="detail-poster-img">
         {% else %}
@@ -82,12 +82,12 @@
       <!-- Action Buttons -->
       <div class="detail-actions-row">
         {% if item.type == 'movie' and trailer %}
-          <button type="button" class="btn btn-trailer-jump" onclick="document.getElementById('trailer-section')?.scrollIntoView({behavior: 'smooth'})">
+          <button type="button" class="btn btn-trailer-jump" onclick="window.switchDetailTab ? window.switchDetailTab('pane-trailer') : document.getElementById('trailer-section')?.scrollIntoView({behavior: 'smooth'})">
             ▶ Watch Trailer
           </button>
         {% endif %}
         {% if item.type == 'movie' %}
-          <button type="button" class="btn btn-soothing-jump" onclick="document.getElementById('soothing-review-card')?.scrollIntoView({behavior: 'smooth'})">
+          <button type="button" class="btn btn-soothing-jump" onclick="window.switchDetailTab ? window.switchDetailTab('pane-write-review') : document.getElementById('soothing-review-card')?.scrollIntoView({behavior: 'smooth'})">
             ✍️ Review Movie
           </button>
         {% endif %}
@@ -110,213 +110,248 @@
 
     <div class="detail-primary-content">
 
-      <!-- Description Section -->
-      <section class="detail-card detail-description-section">
-        <h2 class="detail-card-heading">
-          {% if item.type == 'movie' %}📖 Synopsis & Overview
-          {% elif item.type == 'song' %}🎵 Meaning & Audio Architecture
-          {% else %}🏆 Team Legacy & Franchise Profile
-          {% endif %}
-        </h2>
-        <div class="detail-description-body">
-          <p class="description-text">{{ details.description }}</p>
-          {% if details.themes %}
-            <div class="detail-thematic-note">
-              <strong>Core Themes & Craft:</strong> {{ details.themes }}
-            </div>
-          {% endif %}
-        </div>
-      </section>
+      <!-- Compact Tab Navigation -->
+      <div class="detail-nav-tabs" role="tablist">
+        <button type="button" class="detail-tab-btn active" data-tab-target="pane-overview" role="tab" aria-selected="true">
+          📖 Overview & Synopsis
+        </button>
+        {% if item.type == 'movie' and trailer %}
+          <button type="button" class="detail-tab-btn" data-tab-target="pane-trailer" role="tab" aria-selected="false">
+            🎬 Trailer
+          </button>
+        {% endif %}
+        <button type="button" class="detail-tab-btn" data-tab-target="pane-comments" role="tab" aria-selected="false">
+          💬 Reviews & Discussion <span class="tab-badge-cnt">{{ comments|length }}</span>
+        </button>
+        {% if item.type == 'movie' %}
+          <button type="button" class="detail-tab-btn" data-tab-target="pane-write-review" role="tab" aria-selected="false">
+            ✍️ Write Reflection
+          </button>
+        {% endif %}
+      </div>
 
-      <!-- Official Trailer Section -->
-      {% if item.type == 'movie' and trailer %}
-        <section class="detail-card detail-trailer-section" id="trailer-section">
-          <div class="detail-trailer-header">
-            <h2 class="detail-card-heading">🎬 Official Trailer</h2>
-            {% if trailer.watch_url %}
-              <a href="{{ trailer.watch_url }}" target="_blank" rel="noopener noreferrer" class="btn-ghost btn-small">
-                Watch on YouTube ↗
-              </a>
+      <!-- Tab Pane 1: Overview & Themes -->
+      <div class="detail-tab-pane active" id="pane-overview">
+        <section class="detail-card detail-description-section">
+          <h2 class="detail-card-heading">
+            {% if item.type == 'movie' %}📖 Synopsis & Overview
+            {% elif item.type == 'song' %}🎵 Meaning & Audio Architecture
+            {% else %}🏆 Team Legacy & Franchise Profile
+            {% endif %}
+          </h2>
+          <div class="detail-description-body">
+            <p class="description-text">{{ details.description }}</p>
+            {% if details.themes %}
+              <div class="detail-thematic-note">
+                <strong>Core Themes & Craft:</strong> {{ details.themes }}
+              </div>
             {% endif %}
           </div>
-          <div class="detail-trailer-wrap">
-            <iframe 
-              src="{{ trailer.embed_url }}" 
-              title="{{ item.title }} Official Trailer" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowfullscreen>
-            </iframe>
-          </div>
         </section>
+      </div>
+
+      <!-- Tab Pane 2: Official Trailer -->
+      {% if item.type == 'movie' and trailer %}
+        <div class="detail-tab-pane" id="pane-trailer">
+          <section class="detail-card detail-trailer-section" id="trailer-section">
+            <div class="detail-trailer-header">
+              <h2 class="detail-card-heading">🎬 Official Trailer</h2>
+              {% if trailer.watch_url %}
+                <a href="{{ trailer.watch_url }}" target="_blank" rel="noopener noreferrer" class="btn-ghost btn-small">
+                  Watch on YouTube ↗
+                </a>
+              {% endif %}
+            </div>
+            <div class="detail-trailer-wrap">
+              <iframe 
+                src="{{ trailer.embed_url }}" 
+                title="{{ item.title }} Official Trailer" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+              </iframe>
+            </div>
+          </section>
+        </div>
       {% endif %}
 
-      <!-- Soothing Movie Review Card -->
+      <!-- Tab Pane 3: Soothing Movie Review Card -->
       {% if item.type == 'movie' %}
-        <section class="detail-card soothing-review-detail-card" id="soothing-review-card">
-          <div class="soothing-card-header">
-            <div class="soothing-brand-badge">
-              <span class="soothing-leaf-icon">🌸</span>
-              <span>MINDFUL MOVIE REVIEW</span>
+        <div class="detail-tab-pane" id="pane-write-review">
+          <section class="detail-card soothing-review-detail-card" id="soothing-review-card">
+            <div class="soothing-card-header">
+              <div class="soothing-brand-badge">
+                <span class="soothing-leaf-icon">🌸</span>
+                <span>MINDFUL MOVIE REVIEW</span>
+              </div>
+              <h2 class="detail-card-heading">Share Your Reflection on {{ item.title }}</h2>
+              <p class="text-muted-sm">Rate this film and share your takeaways in a peaceful, soothing atmosphere.</p>
             </div>
-            <h2 class="detail-card-heading">Share Your Reflection on {{ item.title }}</h2>
-            <p class="text-muted-sm">Rate this film and share your takeaways in a peaceful, soothing atmosphere.</p>
+
+            {% if g.user %}
+              <form method="post" action="{{ url_for('items.submit_review', item_id=item.id) }}" class="soothing-form detail-soothing-form">
+                <input type="hidden" name="rating" id="detailSelectedRating" value="{{ user_rating or 5 }}">
+                <input type="hidden" name="vibe_tag" id="detailSelectedVibe" value="">
+
+                <div class="soothing-rating-section">
+                  <label class="soothing-label">Your Impression</label>
+                  <div class="soothing-stars-row" id="detailStarsRow">
+                    {% for r in [1, 2, 3, 4, 5] %}
+                      <button type="button" class="soothing-star-btn {{ 'active' if (user_rating or 5) >= r }}" data-rating="{{ r }}" title="{{ r }} Star{% if r > 1 %}s{% endif %}">★</button>
+                    {% endfor %}
+                  </div>
+                  <div class="soothing-rating-label" id="detailRatingDesc">
+                    {% if user_rating == 1 %}A quiet reflection & nuance (1★)
+                    {% elif user_rating == 2 %}Intriguing elements, room to grow (2★)
+                    {% elif user_rating == 3 %}Satisfying & enjoyable experience (3★)
+                    {% elif user_rating == 4 %}Heartfelt, memorable & resonant (4★)
+                    {% else %}An extraordinary masterpiece (5★)
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="soothing-vibes-section">
+                  <label class="soothing-label">Atmosphere & Emotional Vibe</label>
+                  <div class="soothing-chips-tray" id="detailVibeChipsTray">
+                    <button type="button" class="soothing-vibe-chip" data-vibe="Mind-Bending">🌌 Mind-Bending</button>
+                    <button type="button" class="soothing-vibe-chip" data-vibe="Peaceful & Calming">🌿 Peaceful & Calming</button>
+                    <button type="button" class="soothing-vibe-chip" data-vibe="Deeply Emotional">🎭 Deeply Emotional</button>
+                    <button type="button" class="soothing-vibe-chip" data-vibe="Visually Stunning">✨ Visually Stunning</button>
+                    <button type="button" class="soothing-vibe-chip" data-vibe="Thrilling Spectacle">⚡ Thrilling Spectacle</button>
+                    <button type="button" class="soothing-vibe-chip" data-vibe="Soulful Craft">🎵 Soulful Craft</button>
+                  </div>
+                </div>
+
+                <div class="soothing-textarea-section">
+                  <label class="soothing-label" for="detailReviewContent">Your Thoughts & Takeaways</label>
+                  <textarea id="detailReviewContent" name="content" rows="3" class="soothing-textarea" placeholder="Share what resonated with you... The performances, cinematography, subtle themes, or personal takeaways..."></textarea>
+                </div>
+
+                <div class="soothing-actions-row" style="margin-top: 1rem;">
+                  <button type="submit" class="btn btn-soothing-submit">
+                    ✨ Post Peaceful Review
+                  </button>
+                </div>
+              </form>
+            {% else %}
+              <div class="soothing-login-prompt">
+                <p>Want to review <strong>{{ item.title }}</strong>? <a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to write a review with our community.</p>
+              </div>
+            {% endif %}
+          </section>
+        </div>
+      {% endif %}
+
+      <!-- Tab Pane 4: Community Comments Section -->
+      <div class="detail-tab-pane" id="pane-comments">
+        <section class="detail-card detail-comments-section" id="community-comments">
+          <div class="comments-head">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; width: 100%;">
+              <h2 class="detail-card-heading" style="margin-bottom: 0;">
+                💬 Reviews Tagged to {{ item.title }}
+                <span class="badge-count">{{ comments|length }}</span>
+              </h2>
+              {% if item.type == 'movie' %}
+                <button type="button" class="btn btn-xs btn-ghost" onclick="switchDetailTab('pane-write-review')">
+                  ✍️ Add Your Review
+                </button>
+              {% endif %}
+            </div>
+            <span class="text-muted-sm">Real thoughts & discussions from fans who tagged this {{ item.type }}</span>
           </div>
 
+          <!-- Add Comment Form -->
           {% if g.user %}
-            <form method="post" action="{{ url_for('items.submit_review', item_id=item.id) }}" class="soothing-form detail-soothing-form">
-              <input type="hidden" name="rating" id="detailSelectedRating" value="{{ user_rating or 5 }}">
-              <input type="hidden" name="vibe_tag" id="detailSelectedVibe" value="">
-
-              <div class="soothing-rating-section">
-                <label class="soothing-label">Your Impression</label>
-                <div class="soothing-stars-row" id="detailStarsRow">
-                  {% for r in [1, 2, 3, 4, 5] %}
-                    <button type="button" class="soothing-star-btn {{ 'active' if (user_rating or 5) >= r }}" data-rating="{{ r }}" title="{{ r }} Star{% if r > 1 %}s{% endif %}">★</button>
-                  {% endfor %}
-                </div>
-                <div class="soothing-rating-label" id="detailRatingDesc">
-                  {% if user_rating == 1 %}A quiet reflection & nuance (1★)
-                  {% elif user_rating == 2 %}Intriguing elements, room to grow (2★)
-                  {% elif user_rating == 3 %}Satisfying & enjoyable experience (3★)
-                  {% elif user_rating == 4 %}Heartfelt, memorable & resonant (4★)
-                  {% else %}An extraordinary masterpiece (5★)
+            <form method="post" action="{{ url_for('items.add_comment', item_id=item.id) }}" class="detail-comment-form">
+              <div class="comment-input-wrap">
+                <div class="user-avatar-tiny">
+                  {% if g.user.avatar_url %}
+                    <img src="{{ g.user.avatar_url }}" alt="{{ g.user.username }}">
+                  {% else %}
+                    <span>{{ g.user.username[:1].upper() }}</span>
                   {% endif %}
                 </div>
+                <textarea name="content" rows="3" required placeholder="Write a review tagged to {{ item.title }}... Share your thoughts, rating context, or standout moments..."></textarea>
               </div>
-
-              <div class="soothing-vibes-section">
-                <label class="soothing-label">Atmosphere & Emotional Vibe</label>
-                <div class="soothing-chips-tray" id="detailVibeChipsTray">
-                  <button type="button" class="soothing-vibe-chip" data-vibe="Mind-Bending">🌌 Mind-Bending</button>
-                  <button type="button" class="soothing-vibe-chip" data-vibe="Peaceful & Calming">🌿 Peaceful & Calming</button>
-                  <button type="button" class="soothing-vibe-chip" data-vibe="Deeply Emotional">🎭 Deeply Emotional</button>
-                  <button type="button" class="soothing-vibe-chip" data-vibe="Visually Stunning">✨ Visually Stunning</button>
-                  <button type="button" class="soothing-vibe-chip" data-vibe="Thrilling Spectacle">⚡ Thrilling Spectacle</button>
-                  <button type="button" class="soothing-vibe-chip" data-vibe="Soulful Craft">🎵 Soulful Craft</button>
-                </div>
-              </div>
-
-              <div class="soothing-textarea-section">
-                <label class="soothing-label" for="detailReviewContent">Your Thoughts & Takeaways</label>
-                <textarea id="detailReviewContent" name="content" rows="3" class="soothing-textarea" placeholder="Share what resonated with you... The performances, cinematography, subtle themes, or personal takeaways..."></textarea>
-              </div>
-
-              <div class="soothing-actions-row" style="margin-top: 1rem;">
-                <button type="submit" class="btn btn-soothing-submit">
-                  ✨ Post Peaceful Review
-                </button>
+              <div class="comment-form-actions">
+                <span class="sentiment-hint">⚡ Sentiment analysis tags your review automatically</span>
+                <button type="submit" class="btn btn-small">Post Review</button>
               </div>
             </form>
           {% else %}
-            <div class="soothing-login-prompt">
-              <p>Want to review <strong>{{ item.title }}</strong>? <a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to write a review with our community.</p>
+            <div class="comment-login-prompt">
+              <p>Want to review this {{ item.type }}? <a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to write a review tagged to {{ item.title }}.</p>
             </div>
           {% endif %}
-        </section>
-      {% endif %}
 
-      <!-- Community Comments Section -->
-      <section class="detail-card detail-comments-section" id="community-comments">
-        <div class="comments-head">
-          <h2 class="detail-card-heading">
-            💬 Reviews Tagged to {{ item.title }}
-            <span class="badge-count">{{ comments|length }}</span>
-          </h2>
-          <span class="text-muted-sm">Real thoughts & discussions from fans who tagged this {{ item.type }}</span>
-        </div>
-
-        <!-- Add Comment Form -->
-        {% if g.user %}
-          <form method="post" action="{{ url_for('items.add_comment', item_id=item.id) }}" class="detail-comment-form">
-            <div class="comment-input-wrap">
-              <div class="user-avatar-tiny">
-                {% if g.user.avatar_url %}
-                  <img src="{{ g.user.avatar_url }}" alt="{{ g.user.username }}">
-                {% else %}
-                  <span>{{ g.user.username[:1].upper() }}</span>
-                {% endif %}
+          <!-- Comments List -->
+          <div class="detail-comments-list">
+            {% if comments %}
+              {% for c in comments %}
+                <div class="comment-item {{ 'comment-pinned' if c.is_pinned }}">
+                  <div class="comment-author-avatar">
+                    {% if c.avatar_url %}
+                      <img src="{{ c.avatar_url }}" alt="{{ c.username }}">
+                    {% else %}
+                      <span>{{ c.username[:1].upper() }}</span>
+                    {% endif %}
+                  </div>
+                  <div class="comment-content-wrap">
+                    <div class="comment-meta">
+                      <strong class="comment-username">{{ c.username }}</strong>
+                      {% if c.user_role == 'admin' %}
+                        <span class="chip-admin-xs">ADMIN</span>
+                      {% endif %}
+                      {% if c.author_badges and c.author_badges.tier %}
+                        <span class="badge-trust-tier {{ c.author_badges.tier.badge_class }}" title="{{ c.author_badges.tier.description }}">
+                          {{ c.author_badges.tier.icon }} {{ c.author_badges.tier.name }}
+                        </span>
+                      {% endif %}
+                      <span class="comment-date text-muted-sm">{{ c.created_at[:16] if c.created_at else '' }}</span>
+                      {% if c.sentiment_label %}
+                        <span class="sentiment-pill sentiment-{{ c.sentiment_label }}">
+                          {{ c.sentiment_label|capitalize }}
+                        </span>
+                      {% endif %}
+                    </div>
+                    <div class="comment-body">
+                      {{ c.content }}
+                    </div>
+                    <!-- Emoji reactions on reviews -->
+                    <div class="feed-reactions-group comment-rxn-bar" id="reactions-post-{{ c.id }}">
+                      <button type="button" class="post-rxn-btn {% if c.user_reaction == 'fire' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'fire', this)" title="🔥 Fire / Hype">
+                        <span class="rxn-icon">🔥</span>
+                        <span class="rxn-cnt">{{ c.reactions.fire if c.reactions.fire > 0 else '' }}</span>
+                      </button>
+                      <button type="button" class="post-rxn-btn {% if c.user_reaction == 'love' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'love', this)" title="❤️ Love this">
+                        <span class="rxn-icon">❤️</span>
+                        <span class="rxn-cnt">{{ c.reactions.love if c.reactions.love > 0 else '' }}</span>
+                      </button>
+                      <button type="button" class="post-rxn-btn {% if c.user_reaction == 'insightful' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'insightful', this)" title="👏 Insightful review">
+                        <span class="rxn-icon">👏</span>
+                        <span class="rxn-cnt">{{ c.reactions.insightful if c.reactions.insightful > 0 else '' }}</span>
+                      </button>
+                      <button type="button" class="post-rxn-btn {% if c.user_reaction == 'mindblown' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'mindblown', this)" title="🤯 Mind Blown">
+                        <span class="rxn-icon">🤯</span>
+                        <span class="rxn-cnt">{{ c.reactions.mindblown if c.reactions.mindblown > 0 else '' }}</span>
+                      </button>
+                      <button type="button" class="post-rxn-btn {% if c.user_reaction == 'disagree' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'disagree', this)" title="😡 Hot take / Disagree">
+                        <span class="rxn-icon">😡</span>
+                        <span class="rxn-cnt">{{ c.reactions.disagree if c.reactions.disagree > 0 else '' }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-comments">
+                <div class="empty-icon">💭</div>
+                <p>No community reviews tagged to {{ item.title }} yet.</p>
+                <p class="empty-sub">Be the first fan to review this {{ item.type }} and share your perspective!</p>
               </div>
-              <textarea name="content" rows="3" required placeholder="Write a review tagged to {{ item.title }}... Share your thoughts, rating context, or standout moments..."></textarea>
-            </div>
-            <div class="comment-form-actions">
-              <span class="sentiment-hint">⚡ Sentiment analysis tags your review automatically</span>
-              <button type="submit" class="btn btn-small">Post Review</button>
-            </div>
-          </form>
-        {% else %}
-          <div class="comment-login-prompt">
-            <p>Want to review this {{ item.type }}? <a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to write a review tagged to {{ item.title }}.</p>
+            {% endif %}
           </div>
-        {% endif %}
-
-        <!-- Comments List -->
-        <div class="detail-comments-list">
-          {% if comments %}
-            {% for c in comments %}
-              <div class="comment-item {{ 'comment-pinned' if c.is_pinned }}">
-                <div class="comment-author-avatar">
-                  {% if c.avatar_url %}
-                    <img src="{{ c.avatar_url }}" alt="{{ c.username }}">
-                  {% else %}
-                    <span>{{ c.username[:1].upper() }}</span>
-                  {% endif %}
-                </div>
-                <div class="comment-content-wrap">
-                  <div class="comment-meta">
-                    <strong class="comment-username">{{ c.username }}</strong>
-                    {% if c.user_role == 'admin' %}
-                      <span class="chip-admin-xs">ADMIN</span>
-                    {% endif %}
-                    {% if c.author_badges and c.author_badges.tier %}
-                      <span class="badge-trust-tier {{ c.author_badges.tier.badge_class }}" title="{{ c.author_badges.tier.description }}">
-                        {{ c.author_badges.tier.icon }} {{ c.author_badges.tier.name }}
-                      </span>
-                    {% endif %}
-                    <span class="comment-date text-muted-sm">{{ c.created_at[:16] if c.created_at else '' }}</span>
-                    {% if c.sentiment_label %}
-                      <span class="sentiment-pill sentiment-{{ c.sentiment_label }}">
-                        {{ c.sentiment_label|capitalize }}
-                      </span>
-                    {% endif %}
-                  </div>
-                  <div class="comment-body">
-                    {{ c.content }}
-                  </div>
-                  <!-- Emoji reactions on reviews -->
-                  <div class="feed-reactions-group comment-rxn-bar" id="reactions-post-{{ c.id }}">
-                    <button type="button" class="post-rxn-btn {% if c.user_reaction == 'fire' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'fire', this)" title="🔥 Fire / Hype">
-                      <span class="rxn-icon">🔥</span>
-                      <span class="rxn-cnt">{{ c.reactions.fire if c.reactions.fire > 0 else '' }}</span>
-                    </button>
-                    <button type="button" class="post-rxn-btn {% if c.user_reaction == 'love' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'love', this)" title="❤️ Love this">
-                      <span class="rxn-icon">❤️</span>
-                      <span class="rxn-cnt">{{ c.reactions.love if c.reactions.love > 0 else '' }}</span>
-                    </button>
-                    <button type="button" class="post-rxn-btn {% if c.user_reaction == 'insightful' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'insightful', this)" title="👏 Insightful review">
-                      <span class="rxn-icon">👏</span>
-                      <span class="rxn-cnt">{{ c.reactions.insightful if c.reactions.insightful > 0 else '' }}</span>
-                    </button>
-                    <button type="button" class="post-rxn-btn {% if c.user_reaction == 'mindblown' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'mindblown', this)" title="🤯 Mind Blown">
-                      <span class="rxn-icon">🤯</span>
-                      <span class="rxn-cnt">{{ c.reactions.mindblown if c.reactions.mindblown > 0 else '' }}</span>
-                    </button>
-                    <button type="button" class="post-rxn-btn {% if c.user_reaction == 'disagree' %}rxn-active{% endif %}" onclick="sendReaction({{ c.id }}, 'disagree', this)" title="😡 Hot take / Disagree">
-                      <span class="rxn-icon">😡</span>
-                      <span class="rxn-cnt">{{ c.reactions.disagree if c.reactions.disagree > 0 else '' }}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            {% endfor %}
-          {% else %}
-            <div class="empty-comments">
-              <div class="empty-icon">💭</div>
-              <p>No community reviews tagged to {{ item.title }} yet.</p>
-              <p class="empty-sub">Be the first fan to review this {{ item.type }} and share your perspective!</p>
-            </div>
-          {% endif %}
-        </div>
-      </section>
+        </section>
+      </div>
 
     </div>
 
@@ -528,11 +563,48 @@
             }
           });
         }
+  // Detail content tab switcher
+  window.switchDetailTab = function(targetPaneId) {
+    var tabs = document.querySelectorAll('.detail-tab-btn');
+    var panes = document.querySelectorAll('.detail-tab-pane');
+    tabs.forEach(function(t) {
+      if (t.getAttribute('data-tab-target') === targetPaneId) {
+        t.classList.add('active');
+        t.setAttribute('aria-selected', 'true');
+      } else {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
       }
-    } catch (err) {
-      console.error("Failed to react:", err);
+    });
+    panes.forEach(function(p) {
+      if (p.id === targetPaneId) {
+        p.classList.add('active');
+      } else {
+        p.classList.remove('active');
+      }
+    });
+    var paneEl = document.getElementById(targetPaneId);
+    if (paneEl) {
+      paneEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   };
+
+  document.querySelectorAll('.detail-tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var target = this.getAttribute('data-tab-target');
+      if (target && window.switchDetailTab) {
+        window.switchDetailTab(target);
+      }
+    });
+  });
+
+  if (window.location.hash) {
+    var hash = window.location.hash;
+    if (hash === '#trailer-section') window.switchDetailTab('pane-trailer');
+    else if (hash === '#community-comments') window.switchDetailTab('pane-comments');
+    else if (hash === '#soothing-review-card') window.switchDetailTab('pane-write-review');
+  }
 })();
 </script>
 {% endblock %}

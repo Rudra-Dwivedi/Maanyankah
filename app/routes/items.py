@@ -847,159 +847,20 @@ def submit_review(item_id):
 
 @bp.route("/movies")
 def movies_hub():
-    """Dedicated Movies Section Hub: multi-criteria aspect ratings, mood cloud, audience vs critic split."""
-    db = get_db()
-    active_mood = request.args.get("mood", "").strip().lower()
-    active_aspect = request.args.get("aspect", "").strip().lower()
-
-    movies = db.execute(
-        """
-        SELECT i.*,
-               COALESCE(ROUND(AVG(up.rating), 1), 0) AS avg_rating,
-               COUNT(up.rating) AS rating_count
-        FROM items i
-        LEFT JOIN user_preferences up ON i.id = up.item_id
-        WHERE i.type = 'movie'
-        GROUP BY i.id
-        ORDER BY avg_rating DESC, rating_count DESC
-        """
-    ).fetchall()
-    movie_list = [dict(m) for m in movies]
-    movie_list = with_image_urls(movie_list)
-
-    for m in movie_list:
-        m["aspects"] = get_movie_aspect_ratings(db, m["id"])
-        m["split"] = get_movie_audience_vs_critic_split(db, m["id"])
-        m["mood_tags"] = get_item_mood_tags(db, m["id"])
-        tags_raw = m.get("genre_tags") or ""
-        m["genres"] = [t.strip().title() for t in tags_raw.split(",") if t.strip()]
-
-    # Filter by mood if selected
-    if active_mood:
-        movie_list = [m for m in movie_list if any(t["mood"].lower() == active_mood for t in m["mood_tags"])]
-
-    # Filter/Sort by craft aspect
-    if active_aspect in ("storyline", "acting", "direction", "cinematography", "music"):
-        movie_list.sort(key=lambda m: m["aspects"]["aspects"].get(active_aspect, 0.0), reverse=True)
-
-    # Craft champions
-    best_story = max(movie_list, key=lambda m: m["aspects"]["aspects"].get("storyline", 0.0), default=None)
-    best_acting = max(movie_list, key=lambda m: m["aspects"]["aspects"].get("acting", 0.0), default=None)
-    best_direction = max(movie_list, key=lambda m: m["aspects"]["aspects"].get("direction", 0.0), default=None)
-    best_visuals = max(movie_list, key=lambda m: m["aspects"]["aspects"].get("cinematography", 0.0), default=None)
-    best_music = max(movie_list, key=lambda m: m["aspects"]["aspects"].get("music", 0.0), default=None)
-
-    # Recent reviews tagged to movies
-    recent_reviews = db.execute(
-        """
-        SELECT p.*, u.username, u.avatar_url, u.role as user_role, i.title as movie_title
-        FROM posts p
-        JOIN users u ON p.user_id = u.id
-        JOIN items i ON p.item_id = i.id
-        WHERE i.type = 'movie'
-        ORDER BY p.created_at DESC LIMIT 6
-        """
-    ).fetchall()
-
-    return render_template(
-        "movies_hub.html",
-        movies=movie_list,
-        active_mood=active_mood,
-        active_aspect=active_aspect,
-        preset_moods=PRESET_MOVIE_MOODS,
-        best_story=best_story,
-        best_acting=best_acting,
-        best_direction=best_direction,
-        best_visuals=best_visuals,
-        best_music=best_music,
-        recent_reviews=recent_reviews,
-    )
+    """Redirect to unified catalog filtered by movies."""
+    return redirect(url_for("items.browse", type="movie"))
 
 
 @bp.route("/songs")
 def songs_hub():
-    """Dedicated Music Section Hub: emotion impact, replay value, lyrics vs music balance, quick reactions."""
-    db = get_db()
-    active_emotion = request.args.get("emotion", "").strip().lower()
-
-    songs = db.execute(
-        """
-        SELECT i.*,
-               COALESCE(ROUND(AVG(up.rating), 1), 0) AS avg_rating,
-               COUNT(up.rating) AS rating_count
-        FROM items i
-        LEFT JOIN user_preferences up ON i.id = up.item_id
-        WHERE i.type = 'song'
-        GROUP BY i.id
-        ORDER BY avg_rating DESC, rating_count DESC
-        """
-    ).fetchall()
-    song_list = [dict(s) for s in songs]
-    song_list = with_image_urls(song_list)
-
-    user_id = g.user["id"] if g.user else None
-    for s in song_list:
-        s["eval"] = get_song_evaluation_summary(db, s["id"])
-        s["reactions"] = get_item_quick_reactions(db, s["id"], user_id)
-        tags_raw = s.get("genre_tags") or ""
-        s["genres"] = [t.strip().title() for t in tags_raw.split(",") if t.strip()]
-
-    if active_emotion:
-        song_list = [s for s in song_list if s["eval"].get("dominant_emotion") == active_emotion]
-
-    replay_heavy = sorted(song_list, key=lambda s: s["eval"].get("replay_value", 0.0), reverse=True)
-    lyrical_champions = sorted(song_list, key=lambda s: s["eval"].get("lyrics_score", 0.0), reverse=True)
-    sonic_champions = sorted(song_list, key=lambda s: s["eval"].get("music_score", 0.0), reverse=True)
-
-    return render_template(
-        "songs_hub.html",
-        songs=song_list,
-        active_emotion=active_emotion,
-        preset_emotions=PRESET_SONG_EMOTIONS,
-        reaction_meta=QUICK_REACTION_META,
-        replay_heavy=replay_heavy[:5],
-        lyrical_champions=lyrical_champions[:4],
-        sonic_champions=sonic_champions[:4],
-    )
+    """Redirect to unified catalog filtered by music."""
+    return redirect(url_for("items.browse", type="song"))
 
 
 @bp.route("/sports")
 def sports_hub():
-    """Dedicated Sports Arena Hub: Match Excitement Index, prediction arena, highlight voting."""
-    db = get_db()
-    teams = db.execute(
-        """
-        SELECT i.*,
-               COALESCE(ROUND(AVG(up.rating), 1), 0) AS avg_rating,
-               COUNT(up.rating) AS rating_count
-        FROM items i
-        LEFT JOIN user_preferences up ON i.id = up.item_id
-        WHERE i.type = 'team'
-        GROUP BY i.id
-        ORDER BY avg_rating DESC
-        """
-    ).fetchall()
-    team_list = [dict(t) for t in teams]
-    team_list = with_image_urls(team_list)
-
-    user_id = g.user["id"] if g.user else None
-    for t in team_list:
-        t["match_summary"] = get_sports_match_summary(db, t["id"])
-        t["highlights"] = get_sports_highlight_votes(db, t["id"])
-        t["predictions"] = get_sports_predictions_summary(db, t["id"], user_id)
-        tags_raw = t.get("genre_tags") or ""
-        t["genres"] = [g_tag.strip().title() for g_tag in tags_raw.split(",") if g_tag.strip()]
-
-    thrillers = sorted(team_list, key=lambda t: t["match_summary"].get("excitement_index", 0), reverse=True)
-    prediction_leaderboard = get_sports_prediction_leaderboard(db, limit=10)
-
-    return render_template(
-        "sports_hub.html",
-        teams=team_list,
-        thrillers=thrillers,
-        prediction_leaderboard=prediction_leaderboard,
-        highlight_meta=HIGHLIGHT_TYPE_META,
-    )
+    """Redirect to unified catalog filtered by sports."""
+    return redirect(url_for("items.browse", type="team"))
 
 
 # ===========================================================================
@@ -1186,7 +1047,7 @@ def submit_prediction(item_id):
     if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"success": True, "predictions": summary})
     flash("Match prediction locked in!")
-    return redirect(request.referrer or url_for("items.sports_hub"))
+    return redirect(request.referrer or url_for("items.browse", type="team"))
 
 
 @bp.route("/<int:item_id>/vote-highlight", methods=["POST"])

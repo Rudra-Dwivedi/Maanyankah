@@ -45,19 +45,19 @@ def create_app(config_class=Config):
     @app.route("/movies/")
     def movies_shortcut():
         from flask import redirect, url_for
-        return redirect(url_for("items.movies_hub"))
+        return redirect(url_for("items.browse", type="movie"))
 
     @app.route("/songs")
     @app.route("/songs/")
     def songs_shortcut():
         from flask import redirect, url_for
-        return redirect(url_for("items.songs_hub"))
+        return redirect(url_for("items.browse", type="song"))
 
     @app.route("/sports")
     @app.route("/sports/")
     def sports_shortcut():
         from flask import redirect, url_for
-        return redirect(url_for("items.sports_hub"))
+        return redirect(url_for("items.browse", type="team"))
 
     @app.route("/health")
     def health():

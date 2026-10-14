@@ -59,6 +59,10 @@ def create_app(config_class=Config):
         from flask import redirect, url_for
         return redirect(url_for("items.sports_hub"))
 
+    @app.route("/health")
+    def health():
+        return {"status": "ok", "app": "Maanyankah"}, 200
+
     @app.errorhandler(403)
     def forbidden(e):
         return render_template("403.html"), 403

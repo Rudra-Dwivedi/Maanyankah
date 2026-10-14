@@ -3,9 +3,12 @@
 {% block content %}
 <div class="container page">
 
-  <div class="page-head">
-    <h1>Browse</h1>
-    <p class="page-sub">Rate a few things in each category — the more you rate, the sharper your matches and group picks get.</p>
+  <div class="page-head page-head-compact">
+    <div class="page-head-title-row">
+      <h1>Browse</h1>
+      <span class="badge-count">{{ items|length }} items</span>
+    </div>
+    <p class="page-sub">Rate items across movies, music, and sports — the more you rate, the sharper your matches and group picks get.</p>
   </div>
 
   <!-- Dynamic Latest Movies Flash Spotlight Section (Shown on default browse) -->
@@ -153,8 +156,8 @@
 
       <!-- Density View Switcher (Compact Poster Grid / Cozy Cards / Dense List) -->
       <div class="density-switch-group" role="group" aria-label="Catalog Display Density">
-        <button type="button" class="btn-density-opt" data-density="compact" title="Compact Poster Mode (High Density, Letterboxd style)">⊞</button>
-        <button type="button" class="btn-density-opt active" data-density="cozy" title="Cozy Card Mode (Standard)">▦</button>
+        <button type="button" class="btn-density-opt active" data-density="compact" title="Compact Poster Mode (High Density, Letterboxd style)">⊞</button>
+        <button type="button" class="btn-density-opt" data-density="cozy" title="Cozy Card Mode (Standard)">▦</button>
         <button type="button" class="btn-density-opt" data-density="list" title="Dense List Mode (Table Rows)">☰</button>
       </div>
     </div>
@@ -341,7 +344,7 @@
     </div>
   {% endif %}
 
-  <div class="item-grid" id="catalog-grid" data-density="cozy">
+  <div class="item-grid" id="catalog-grid" data-density="compact">
     {% for item in items %}
       {% set current = user_ratings.get(item['id']) %}
       <div class="item-card item-card-{{ item['type'] }}" data-item-id="{{ item['id'] }}">
@@ -1461,8 +1464,8 @@
   // 1. Catalog Display Density Switcher (Compact / Cozy / List)
   var catalogGrid = document.getElementById('catalog-grid');
   var densityBtns = document.querySelectorAll('.btn-density-opt');
-  var savedDensity = 'cozy';
-  try { savedDensity = localStorage.getItem('fn_catalog_density') || 'cozy'; } catch(e) {}
+  var savedDensity = 'compact';
+  try { savedDensity = localStorage.getItem('fn_catalog_density') || 'compact'; } catch(e) {}
 
   function applyDensity(density) {
     if (catalogGrid) {

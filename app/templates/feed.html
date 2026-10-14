@@ -79,6 +79,9 @@
               </div>
 
               <div class="composer-submit-group">
+                <label class="checkbox-pin-pill" title="Mark as spoiler to shield plot or outcome surprises">
+                  <input type="checkbox" name="is_spoiler" value="1" onchange="document.getElementById('feedSpoilerWarningWrap').style.display = this.checked ? 'block' : 'none'"> ⚠️ Spoiler
+                </label>
                 {% if g.user['role'] == 'admin' %}
                   <label class="checkbox-pin-pill" title="Pin announcement to top of the feed for all members">
                     <input type="checkbox" name="is_pinned" value="1"> 📌 Pin Announcement
@@ -86,6 +89,9 @@
                 {% endif %}
                 <button type="submit" class="btn btn-small btn-publish">Publish Post</button>
               </div>
+            </div>
+            <div id="feedSpoilerWarningWrap" style="display:none; margin-top: 0.5rem; padding: 0 0.5rem;">
+              <input type="text" name="spoiler_warning" class="composer-spoiler-input" placeholder="Spoiler context (e.g. Discusses final match result or movie twist)..." style="width: 100%; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
             </div>
           </form>
         </div>
@@ -172,7 +178,20 @@
 
             <!-- Post Content Text -->
             <div class="feed-card-content">
-              <p class="feed-text-body">{{ post.content }}</p>
+              {% if post.is_spoiler %}
+                <div class="spoiler-container">
+                  <div class="spoiler-shield" onclick="this.parentElement.classList.toggle('spoiler-revealed')">
+                    <span class="spoiler-icon">⚠️</span>
+                    <span class="spoiler-msg">{{ post.spoiler_warning or 'Review Contains Plot / Outcome Spoilers' }}</span>
+                    <button type="button" class="btn-spoiler-toggle">Click to Reveal</button>
+                  </div>
+                  <div class="spoiler-hidden-content">
+                    <p class="feed-text-body">{{ post.content }}</p>
+                  </div>
+                </div>
+              {% else %}
+                <p class="feed-text-body">{{ post.content }}</p>
+              {% endif %}
             </div>
 
             <!-- Tagged Item Preview Box -->

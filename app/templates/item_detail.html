@@ -50,6 +50,17 @@
         {% if details.vote_average and details.vote_average > 0 %}
           <span class="detail-meta-chip tmdb-score-chip">🎬 TMDB: {{ details.vote_average }}/10</span>
         {% endif %}
+        {% if item.type == 'movie' and audience_critic_split and audience_critic_split.critic_count > 0 %}
+          <span class="detail-meta-chip split-badge-hero" title="Critic Score (Admin & Verified Critics)">👑 Critics: {{ audience_critic_split.critic_pct }}%</span>
+          <span class="detail-meta-chip split-badge-hero" title="Community Audience Score">🍿 Audience: {{ audience_critic_split.audience_pct }}%</span>
+        {% endif %}
+        {% if item.type == 'song' and song_eval and song_eval.dominant_emotion %}
+          <span class="detail-meta-chip emotion-badge-hero">💫 {{ song_eval.dominant_emotion|title }}</span>
+          <span class="detail-meta-chip replay-badge-hero">{{ song_eval.replay_label }}</span>
+        {% endif %}
+        {% if item.type == 'team' and match_summary and match_summary.excitement_index > 0 %}
+          <span class="detail-meta-chip excitement-badge-hero">⚡ Thrill: {{ match_summary.excitement_index }}/100</span>
+        {% endif %}
       </div>
 
       <h1 class="detail-title">{{ item.title }}</h1>
@@ -90,11 +101,22 @@
           <button type="button" class="btn btn-soothing-jump" onclick="window.switchDetailTab ? window.switchDetailTab('pane-write-review') : document.getElementById('soothing-review-card')?.scrollIntoView({behavior: 'smooth'})">
             ✍️ Review Movie
           </button>
+          <button type="button" class="btn-ghost" onclick="window.switchDetailTab ? window.switchDetailTab('pane-craft') : null">
+            🎨 Craft & Moods
+          </button>
         {% endif %}
         {% if item.type == 'song' %}
+          <button type="button" class="btn btn-soothing-jump" onclick="window.switchDetailTab ? window.switchDetailTab('pane-audio') : null">
+            🎵 Audio & Emotion
+          </button>
           <a href="{{ url_for('agent.index', q=item.title) }}" class="btn btn-ask-agent-lg" title="Ask चित्राङ्कः (Chitrankah) deep cultural intelligence">
             🤖 Ask चित्राङ्कः (Chitrankah)
           </a>
+        {% endif %}
+        {% if item.type == 'team' %}
+          <button type="button" class="btn btn-soothing-jump" onclick="window.switchDetailTab ? window.switchDetailTab('pane-sports-arena') : null">
+            🏆 Arena & Predictions
+          </button>
         {% endif %}
         {% if g.user and item.type in ('movie', 'song') %}
           <button type="button" class="btn-ghost btn-item-collection-quick" data-item-id="{{ item.id }}" data-item-title="{{ item.title }}" data-item-type="{{ item.type }}">
@@ -118,6 +140,19 @@
         {% if item.type == 'movie' and trailer %}
           <button type="button" class="detail-tab-btn" data-tab-target="pane-trailer" role="tab" aria-selected="false">
             🎬 Trailer
+          </button>
+        {% endif %}
+        {% if item.type == 'movie' %}
+          <button type="button" class="detail-tab-btn" data-tab-target="pane-craft" role="tab" aria-selected="false">
+            🎨 Craft Pillars & Moods
+          </button>
+        {% elif item.type == 'song' %}
+          <button type="button" class="detail-tab-btn" data-tab-target="pane-audio" role="tab" aria-selected="false">
+            🎵 Audio, Replay & Emotion
+          </button>
+        {% elif item.type == 'team' %}
+          <button type="button" class="detail-tab-btn" data-tab-target="pane-sports-arena" role="tab" aria-selected="false">
+            🏆 Arena, Predictions & Highlights
           </button>
         {% endif %}
         <button type="button" class="detail-tab-btn" data-tab-target="pane-comments" role="tab" aria-selected="false">
@@ -174,6 +209,482 @@
         </div>
       {% endif %}
 
+      <!-- Tab Pane: Craft Pillars & Community Moods (Movies) -->
+      {% if item.type == 'movie' %}
+        <div class="detail-tab-pane" id="pane-craft">
+          <section class="detail-card detail-craft-card">
+            <!-- Audience vs. Critic Score Split -->
+            <div class="detail-craft-split-section">
+              <h2 class="detail-card-heading">👑 Critics vs. 🍿 Audience Split</h2>
+              <div class="hub-critic-audience-box" style="margin-top: 1rem;">
+                <div class="split-scores-row">
+                  <div class="split-col split-critics" title="Critic Score (Admin & Verified Critics)">
+                    <span class="split-col-label">👑 CRITICS SCORE</span>
+                    <strong class="split-pct-val">{{ audience_critic_split.critic_pct if audience_critic_split else 0 }}%</strong>
+                    <span class="split-sub text-muted-xs">avg {{ audience_critic_split.critic_avg if audience_critic_split else 0 }}★ ({{ audience_critic_split.critic_count if audience_critic_split else 0 }} ratings)</span>
+                  </div>
+                  <div class="split-divider-line"></div>
+                  <div class="split-col split-audience" title="General Audience Score">
+                    <span class="split-col-label">🍿 AUDIENCE SCORE</span>
+                    <strong class="split-pct-val">{{ audience_critic_split.audience_pct if audience_critic_split else 0 }}%</strong>
+                    <span class="split-sub text-muted-xs">avg {{ audience_critic_split.audience_avg if audience_critic_split else 0 }}★ ({{ audience_critic_split.audience_count if audience_critic_split else 0 }} ratings)</span>
+                  </div>
+                </div>
+                <div class="split-verdict-bar {{ audience_critic_split.verdict_class if audience_critic_split else '' }}">
+                  <span>{{ audience_critic_split.verdict if audience_critic_split else 'Unrated' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5-Criteria Aspect Craft Ratings -->
+            <div class="detail-aspects-section" style="margin-top: 2rem;">
+              <div class="section-title-row" style="margin-bottom: 0.75rem;">
+                <h3 class="detail-card-heading" style="margin-bottom: 0;">🎨 5-Criteria Craft Ratings</h3>
+                {% if aspect_ratings and aspect_ratings.strongest_aspect %}
+                  <span class="strongest-aspect-badge">Pinnacle: {{ aspect_ratings.strongest_aspect|capitalize }}</span>
+                {% endif %}
+              </div>
+
+              {% if aspect_ratings and aspect_ratings.has_aspects %}
+                <div class="aspect-bars-list" style="margin-bottom: 1.5rem;">
+                  <div class="aspect-bar-item">
+                    <span class="aspect-name">Storyline & Writing</span>
+                    <div class="aspect-bar-track">
+                      <div class="aspect-bar-fill fill-story" style="width: {{ (aspect_ratings.aspects.storyline / 5.0 * 100)|round }}%;"></div>
+                    </div>
+                    <span class="aspect-val">{{ aspect_ratings.aspects.storyline }} / 5.0</span>
+                  </div>
+                  <div class="aspect-bar-item">
+                    <span class="aspect-name">Acting & Lead Ensemble</span>
+                    <div class="aspect-bar-track">
+                      <div class="aspect-bar-fill fill-acting" style="width: {{ (aspect_ratings.aspects.acting / 5.0 * 100)|round }}%;"></div>
+                    </div>
+                    <span class="aspect-val">{{ aspect_ratings.aspects.acting }} / 5.0</span>
+                  </div>
+                  <div class="aspect-bar-item">
+                    <span class="aspect-name">Direction & Creative Vision</span>
+                    <div class="aspect-bar-track">
+                      <div class="aspect-bar-fill fill-direction" style="width: {{ (aspect_ratings.aspects.direction / 5.0 * 100)|round }}%;"></div>
+                    </div>
+                    <span class="aspect-val">{{ aspect_ratings.aspects.direction }} / 5.0</span>
+                  </div>
+                  <div class="aspect-bar-item">
+                    <span class="aspect-name">Cinematography & Visuals</span>
+                    <div class="aspect-bar-track">
+                      <div class="aspect-bar-fill fill-visuals" style="width: {{ (aspect_ratings.aspects.cinematography / 5.0 * 100)|round }}%;"></div>
+                    </div>
+                    <span class="aspect-val">{{ aspect_ratings.aspects.cinematography }} / 5.0</span>
+                  </div>
+                  <div class="aspect-bar-item">
+                    <span class="aspect-name">Music & Score Composition</span>
+                    <div class="aspect-bar-track">
+                      <div class="aspect-bar-fill fill-music" style="width: {{ (aspect_ratings.aspects.music / 5.0 * 100)|round }}%;"></div>
+                    </div>
+                    <span class="aspect-val">{{ aspect_ratings.aspects.music }} / 5.0</span>
+                  </div>
+                </div>
+              {% else %}
+                <p class="text-muted-sm" style="margin-bottom: 1rem;">Be the first film enthusiast to rate the cinematic craft of {{ item.title }}!</p>
+              {% endif %}
+
+              <!-- User Craft Aspect Rating Form -->
+              <div class="user-aspect-rate-box">
+                <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem;">
+                  {% if user_aspects %}
+                    ✏️ Update Your Craft Ratings
+                  {% else %}
+                    ✨ Rate Craft Pillars for {{ item.title }}
+                  {% endif %}
+                </h4>
+
+                {% if g.user %}
+                  <form method="post" action="{{ url_for('items.rate_aspects', item_id=item.id) }}" class="aspect-interactive-form">
+                    <div class="aspect-sliders-grid">
+                      <div class="aspect-slider-row">
+                        <label class="aspect-slider-label">
+                          <span>Storyline</span>
+                          <span class="aspect-val-display" id="detailValStoryline">{{ user_aspects.storyline if user_aspects else 5 }} / 5</span>
+                        </label>
+                        <input type="range" name="storyline" min="1" max="5" value="{{ user_aspects.storyline if user_aspects else 5 }}" class="aspect-range-slider" oninput="document.getElementById('detailValStoryline').textContent = this.value + ' / 5'">
+                      </div>
+
+                      <div class="aspect-slider-row">
+                        <label class="aspect-slider-label">
+                          <span>Acting</span>
+                          <span class="aspect-val-display" id="detailValActing">{{ user_aspects.acting if user_aspects else 5 }} / 5</span>
+                        </label>
+                        <input type="range" name="acting" min="1" max="5" value="{{ user_aspects.acting if user_aspects else 5 }}" class="aspect-range-slider" oninput="document.getElementById('detailValActing').textContent = this.value + ' / 5'">
+                      </div>
+
+                      <div class="aspect-slider-row">
+                        <label class="aspect-slider-label">
+                          <span>Direction</span>
+                          <span class="aspect-val-display" id="detailValDirection">{{ user_aspects.direction if user_aspects else 5 }} / 5</span>
+                        </label>
+                        <input type="range" name="direction" min="1" max="5" value="{{ user_aspects.direction if user_aspects else 5 }}" class="aspect-range-slider" oninput="document.getElementById('detailValDirection').textContent = this.value + ' / 5'">
+                      </div>
+
+                      <div class="aspect-slider-row">
+                        <label class="aspect-slider-label">
+                          <span>Visuals</span>
+                          <span class="aspect-val-display" id="detailValCinematography">{{ user_aspects.cinematography if user_aspects else 5 }} / 5</span>
+                        </label>
+                        <input type="range" name="cinematography" min="1" max="5" value="{{ user_aspects.cinematography if user_aspects else 5 }}" class="aspect-range-slider" oninput="document.getElementById('detailValCinematography').textContent = this.value + ' / 5'">
+                      </div>
+
+                      <div class="aspect-slider-row">
+                        <label class="aspect-slider-label">
+                          <span>Music</span>
+                          <span class="aspect-val-display" id="detailValMusic">{{ user_aspects.music if user_aspects else 5 }} / 5</span>
+                        </label>
+                        <input type="range" name="music" min="1" max="5" value="{{ user_aspects.music if user_aspects else 5 }}" class="aspect-range-slider" oninput="document.getElementById('detailValMusic').textContent = this.value + ' / 5'">
+                      </div>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                      <button type="submit" class="btn btn-small">Save Craft Aspect Ratings</button>
+                    </div>
+                  </form>
+                {% else %}
+                  <p class="text-muted-sm"><a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to submit your 5-criteria craft ratings.</p>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Community Mood Tags & Tagger -->
+            <div class="detail-moods-section" style="margin-top: 2rem;">
+              <h3 class="detail-card-heading">🏷️ Community Mood Cloud</h3>
+              <div class="detail-mood-cloud" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+                {% if mood_tags %}
+                  {% for mt in mood_tags %}
+                    <span class="hub-mood-tag">
+                      🏷️ {{ mt.mood|title }} <span class="mood-tag-cnt">({{ mt.count }})</span>
+                    </span>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-muted-xs">No moods tagged yet. Add one below!</span>
+                {% endif %}
+              </div>
+
+              {% if g.user %}
+                <div class="quick-add-mood-box">
+                  <span class="text-muted-sm" style="display: block; margin-bottom: 0.5rem;">+ Tag this film with a mood:</span>
+                  <div class="quick-mood-buttons-tray">
+                    {% for pm in preset_movie_moods %}
+                      <form method="post" action="{{ url_for('items.add_mood_tag', item_id=item.id) }}" style="display: inline;">
+                        <input type="hidden" name="mood" value="{{ pm.tag }}">
+                        <button type="submit" class="btn-ghost btn-xs" title="Tag as {{ pm.label }}">
+                          <span>{{ pm.icon }}</span> {{ pm.label }}
+                        </button>
+                      </form>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </section>
+        </div>
+      {% endif %}
+
+      <!-- Tab Pane: Audio, Replay & Emotion (Songs) -->
+      {% if item.type == 'song' %}
+        <div class="detail-tab-pane" id="pane-audio">
+          <section class="detail-card detail-audio-card">
+            <h2 class="detail-card-heading">🎵 Audio Architecture & Listener Impact</h2>
+
+            <!-- Metrics Strip -->
+            <div class="song-eval-strip" style="margin-top: 1rem;">
+              <div class="eval-stat-col">
+                <span class="eval-stat-label">DOMINANT EMOTION</span>
+                {% if song_eval and song_eval.dominant_emotion %}
+                  <span class="emotion-badge emotion-{{ song_eval.dominant_emotion }}">
+                    {{ song_eval.dominant_emotion|title }}
+                  </span>
+                {% else %}
+                  <span class="text-muted-xs">Open for evaluation</span>
+                {% endif %}
+              </div>
+
+              <div class="eval-stat-col">
+                <span class="eval-stat-label">REPLAY VALUE</span>
+                <span class="replay-label-badge">{{ song_eval.replay_label if song_eval else 'Unrated' }}</span>
+              </div>
+            </div>
+
+            <!-- Lyrics vs Music Split Box -->
+            <div class="lyrics-music-split-box" style="margin-top: 1.5rem;">
+              <div class="split-head">
+                <span class="split-head-title">📖 Lyrics vs. 🎹 Music</span>
+                <span class="split-head-verdict">{{ song_eval.balance_verdict if song_eval else 'Balanced' }}</span>
+              </div>
+
+              <div class="lyrics-music-bar-track">
+                <div class="lm-bar-segment lm-lyrics" style="width: 50%;">
+                  <span class="lm-bar-text">Lyrics: {{ song_eval.lyrics_score if song_eval else 4 }}/5</span>
+                </div>
+                <div class="lm-bar-segment lm-music" style="width: 50%;">
+                  <span class="lm-bar-text">Music: {{ song_eval.music_score if song_eval else 4 }}/5</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 1-Click Instant Emoji Reactions Bar -->
+            <div class="song-quick-reactions-bar" id="detail-item-rxn-{{ item.id }}" style="margin-top: 1.5rem;">
+              <span class="rxn-bar-heading">Instant Reactions:</span>
+              {% for r_key, r_info in reaction_meta.items() %}
+                {% set count = quick_reactions.counts[r_key] or 0 if quick_reactions else 0 %}
+                {% set is_active = (quick_reactions.user_reaction == r_key) if quick_reactions else false %}
+                <button type="button" 
+                        class="hub-quick-rxn-btn {% if is_active %}active{% endif %}" 
+                        data-item-id="{{ item.id }}" 
+                        data-reaction="{{ r_key }}" 
+                        onclick="toggleItemReaction({{ item.id }}, '{{ r_key }}', this)" 
+                        title="{{ r_info.label }}">
+                  <span class="rxn-emoji">{{ r_info.icon }}</span>
+                  <span class="rxn-count-num">{{ count if count > 0 else '' }}</span>
+                </button>
+              {% endfor %}
+            </div>
+
+            <!-- Interactive Song Evaluation Form -->
+            <div class="user-audio-eval-box" style="margin-top: 2rem;">
+              <h3 class="detail-card-heading">✍️ Submit Your Audio Evaluation</h3>
+              {% if g.user %}
+                <form method="post" action="{{ url_for('items.evaluate_song', item_id=item.id) }}" class="song-eval-form">
+                  <!-- Emotion Choice -->
+                  <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label class="form-label" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">
+                      💫 Dominant Emotional Impact:
+                    </label>
+                    <div class="emotion-choice-grid">
+                      <label class="emotion-radio-label">
+                        <input type="radio" name="emotion" value="energetic" {% if user_song_eval and user_song_eval.emotion == 'energetic' %}checked{% elif not user_song_eval %}checked{% endif %}>
+                        <span>⚡ High Energy</span>
+                      </label>
+                      <label class="emotion-radio-label">
+                        <input type="radio" name="emotion" value="chill" {% if user_song_eval and user_song_eval.emotion == 'chill' %}checked{% endif %}>
+                        <span>🌿 Chill & Mellow</span>
+                      </label>
+                      <label class="emotion-radio-label">
+                        <input type="radio" name="emotion" value="happy" {% if user_song_eval and user_song_eval.emotion == 'happy' %}checked{% endif %}>
+                        <span>☀️ Euphoric & Happy</span>
+                      </label>
+                      <label class="emotion-radio-label">
+                        <input type="radio" name="emotion" value="sad" {% if user_song_eval and user_song_eval.emotion == 'sad' %}checked{% endif %}>
+                        <span>💧 Melancholic & Sad</span>
+                      </label>
+                      <label class="emotion-radio-label">
+                        <input type="radio" name="emotion" value="romantic" {% if user_song_eval and user_song_eval.emotion == 'romantic' %}checked{% endif %}>
+                        <span>❤️ Soulful & Romantic</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Replay Value Slider -->
+                  <div class="aspect-slider-row">
+                    <label class="aspect-slider-label">
+                      <span>🔁 Replay Value (How often would you replay this?)</span>
+                      <span class="aspect-val-display" id="detailValReplay">{{ user_song_eval.replay_value if user_song_eval else 4 }} / 5</span>
+                    </label>
+                    <input type="range" name="replay_value" min="1" max="5" value="{{ user_song_eval.replay_value if user_song_eval else 4 }}" class="aspect-range-slider" oninput="document.getElementById('detailValReplay').textContent = this.value + ' / 5'">
+                  </div>
+
+                  <!-- Lyrics Slider -->
+                  <div class="aspect-slider-row">
+                    <label class="aspect-slider-label">
+                      <span>📖 Lyrical Depth & Meaning</span>
+                      <span class="aspect-val-display" id="detailValLyrics">{{ user_song_eval.lyrics_score if user_song_eval else 4 }} / 5</span>
+                    </label>
+                    <input type="range" name="lyrics_score" min="1" max="5" value="{{ user_song_eval.lyrics_score if user_song_eval else 4 }}" class="aspect-range-slider" oninput="document.getElementById('detailValLyrics').textContent = this.value + ' / 5'">
+                  </div>
+
+                  <!-- Music Slider -->
+                  <div class="aspect-slider-row">
+                    <label class="aspect-slider-label">
+                      <span>🎹 Musical Composition & Beats</span>
+                      <span class="aspect-val-display" id="detailValMusicScore">{{ user_song_eval.music_score if user_song_eval else 4 }} / 5</span>
+                    </label>
+                    <input type="range" name="music_score" min="1" max="5" value="{{ user_song_eval.music_score if user_song_eval else 4 }}" class="aspect-range-slider" oninput="document.getElementById('detailValMusicScore').textContent = this.value + ' / 5'">
+                  </div>
+
+                  <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn btn-small">Save Audio Evaluation</button>
+                  </div>
+                </form>
+              {% else %}
+                <p class="text-muted-sm"><a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to evaluate replay value and emotional impact.</p>
+              {% endif %}
+            </div>
+          </section>
+        </div>
+      {% endif %}
+
+      <!-- Tab Pane: Arena, Predictions & Highlights (Sports) -->
+      {% if item.type == 'team' %}
+        <div class="detail-tab-pane" id="pane-sports-arena">
+          <section class="detail-card detail-sports-arena-card">
+            <h2 class="detail-card-heading">🏆 Match Excitement & Fan Arena</h2>
+
+            <!-- Excitement Index Box -->
+            <div class="sports-excitement-box" style="margin-top: 1rem;">
+              <div class="excitement-header">
+                <div>
+                  <span class="excitement-box-title">⚡ Match Excitement Index</span>
+                  <span class="excitement-tier-chip {{ match_summary.excitement_badge_class if match_summary else '' }}">
+                    {{ match_summary.excitement_tier if match_summary else 'Unrated' }}
+                  </span>
+                </div>
+                <div class="excitement-score-big">
+                  {{ match_summary.excitement_index if match_summary else 0 }}<span class="score-small">/100</span>
+                </div>
+              </div>
+
+              <div class="excitement-sub-metrics">
+                <div class="metric-pill">
+                  <span>Thrill:</span> <strong>{{ match_summary.thrill_level if match_summary else 0 }}/5</strong>
+                </div>
+                <div class="metric-pill">
+                  <span>Competitiveness:</span> <strong>{{ match_summary.competitiveness if match_summary else 0 }}/5</strong>
+                </div>
+                <div class="metric-pill">
+                  <span>Memorable Moments:</span> <strong>{{ match_summary.memorable_moments if match_summary else 0 }}/5</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rate Match Form -->
+            <div class="user-match-rate-box" style="margin-top: 1.5rem;">
+              <h3 class="detail-card-heading" style="font-size: 1.05rem;">⚡ Rate Match Excitement</h3>
+              {% if g.user %}
+                <form method="post" action="{{ url_for('items.rate_match', item_id=item.id) }}" class="match-rate-form">
+                  <div class="aspect-slider-row">
+                    <label class="aspect-slider-label">
+                      <span>⚡ Thrill Level</span>
+                      <span class="aspect-val-display" id="detailValThrill">{{ user_match_rating.thrill_level if user_match_rating else 4 }} / 5</span>
+                    </label>
+                    <input type="range" name="thrill_level" min="1" max="5" value="{{ user_match_rating.thrill_level if user_match_rating else 4 }}" class="aspect-range-slider" oninput="document.getElementById('detailValThrill').textContent = this.value + ' / 5'">
+                  </div>
+
+                  <div class="aspect-slider-row">
+                    <label class="aspect-slider-label">
+                      <span>⚔️ Competitiveness</span>
+                      <span class="aspect-val-display" id="detailValComp">{{ user_match_rating.competitiveness if user_match_rating else 4 }} / 5</span>
+                    </label>
+                    <input type="range" name="competitiveness" min="1" max="5" value="{{ user_match_rating.competitiveness if user_match_rating else 4 }}" class="aspect-range-slider" oninput="document.getElementById('detailValComp').textContent = this.value + ' / 5'">
+                  </div>
+
+                  <div class="aspect-slider-row">
+                    <label class="aspect-slider-label">
+                      <span>🔥 Memorable Moments</span>
+                      <span class="aspect-val-display" id="detailValMem">{{ user_match_rating.memorable_moments if user_match_rating else 4 }} / 5</span>
+                    </label>
+                    <input type="range" name="memorable_moments" min="1" max="5" value="{{ user_match_rating.memorable_moments if user_match_rating else 4 }}" class="aspect-range-slider" oninput="document.getElementById('detailValMem').textContent = this.value + ' / 5'">
+                  </div>
+
+                  <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn btn-small">Submit Match Excitement</button>
+                  </div>
+                </form>
+              {% else %}
+                <p class="text-muted-sm"><a href="{{ url_for('auth.login') }}" class="link-underline">Log in</a> to rate match thrill and drama.</p>
+              {% endif %}
+            </div>
+
+            <!-- Prediction Arena -->
+            <div class="sports-prediction-arena" style="margin-top: 2rem;">
+              <div class="pred-arena-head">
+                <span class="pred-arena-title">🎯 Fan Match Outcome Predictions</span>
+                {% if match_predictions and match_predictions.user_prediction %}
+                  <span class="user-locked-pill">Your Pick: {{ match_predictions.user_prediction.predicted_outcome }}</span>
+                {% endif %}
+              </div>
+
+              {% if match_predictions and match_predictions.breakdown %}
+                <div class="pred-distribution-bar">
+                  {% for pb in match_predictions.breakdown %}
+                    <div class="pred-bar-seg" style="width: {{ pb.percentage }}%;" title="{{ pb.outcome }}: {{ pb.percentage }}% ({{ pb.count }} votes)">
+                      <span>{{ pb.outcome }} {{ pb.percentage }}%</span>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="text-muted-xs" style="margin-bottom: 0.5rem;">No predictions locked in yet. Be the first!</p>
+              {% endif %}
+
+              <form method="post" action="{{ url_for('items.submit_prediction', item_id=item.id) }}" class="quick-pred-buttons-row">
+                <input type="hidden" name="confidence_points" value="10">
+                <button type="submit" name="predicted_outcome" value="Win" class="btn-pred-choice choice-win">
+                  🏆 Win (10 pts)
+                </button>
+                <button type="submit" name="predicted_outcome" value="Draw" class="btn-pred-choice choice-draw">
+                  🤝 Draw (10 pts)
+                </button>
+                <button type="submit" name="predicted_outcome" value="Upset" class="btn-pred-choice choice-upset">
+                  ⚡ Upset (10 pts)
+                </button>
+              </form>
+            </div>
+
+            <!-- Highlight Voting -->
+            <div class="sports-highlights-strip" style="margin-top: 2rem;">
+              <div class="highlight-strip-head">
+                <span class="hl-strip-title">🌟 Community Highlight Votes</span>
+              </div>
+
+              {% if match_highlights %}
+                <div class="highlights-pill-tray" style="margin-bottom: 1rem;">
+                  {% for hl in match_highlights %}
+                    <span class="highlight-vote-chip">
+                      <span class="hl-icon">{{ hl.meta.icon }}</span>
+                      <strong class="hl-text">{{ hl.title }}</strong>
+                      <span class="hl-count">({{ hl.votes }})</span>
+                    </span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="text-muted-xs" style="margin-bottom: 1rem;">No highlights voted yet.</p>
+              {% endif %}
+
+              {% if g.user %}
+                <form method="post" action="{{ url_for('items.vote_highlight', item_id=item.id) }}" class="highlight-inline-form">
+                  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <select name="highlight_type" class="form-select" style="padding: 0.4rem 0.6rem; border-radius: 6px;">
+                      <option value="best_play">⚡ Best Play</option>
+                      <option value="turning_point">🔄 Turning Point</option>
+                      <option value="clutch_moment">🛡️ Clutch Moment</option>
+                      <option value="mvp_performance">👑 MVP Moment</option>
+                    </select>
+                    <input type="text" name="highlight_title" required placeholder="Highlight description..." style="flex: 1; min-width: 180px; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+                    <button type="submit" class="btn btn-small">Vote Highlight</button>
+                  </div>
+                </form>
+              {% endif %}
+            </div>
+
+            <!-- Player Rating & MVP Form -->
+            {% if g.user %}
+              <div class="sports-player-rate-section" style="margin-top: 2rem;">
+                <h3 class="detail-card-heading">👑 Standout Player Performance & MVP</h3>
+                <form method="post" action="{{ url_for('items.rate_player', item_id=item.id) }}" class="player-rate-inline-form">
+                  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                    <input type="text" name="player_name" required placeholder="Player Name..." style="flex: 1; min-width: 160px; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+                    <select name="rating" style="padding: 0.4rem 0.6rem; border-radius: 6px;">
+                      {% for score in range(10, 0, -1) %}
+                        <option value="{{ score }}" {% if score == 8 %}selected{% endif %}>{{ score }} / 10 Rating</option>
+                      {% endfor %}
+                    </select>
+                    <label class="checkbox-pin-pill" style="margin: 0;">
+                      <input type="checkbox" name="is_mvp" value="1"> 👑 MVP
+                    </label>
+                    <button type="submit" class="btn btn-small">Save Player Rating</button>
+                  </div>
+                </form>
+              </div>
+            {% endif %}
+          </section>
+        </div>
+      {% endif %}
+
       <!-- Tab Pane 3: Soothing Movie Review Card -->
       {% if item.type == 'movie' %}
         <div class="detail-tab-pane" id="pane-write-review">
@@ -226,6 +737,16 @@
                   <textarea id="detailReviewContent" name="content" rows="3" class="soothing-textarea" placeholder="Share what resonated with you... The performances, cinematography, subtle themes, or personal takeaways..."></textarea>
                 </div>
 
+                <div class="soothing-spoiler-section" style="margin-top: 0.75rem;">
+                  <label class="checkbox-pin-pill" title="Mark review as spoiler">
+                    <input type="checkbox" name="is_spoiler" value="1" onchange="document.getElementById('soothingSpoilerWarnWrap').style.display = this.checked ? 'block' : 'none'">
+                    ⚠️ Contains Plot Spoilers
+                  </label>
+                  <div id="soothingSpoilerWarnWrap" style="display:none; margin-top: 0.4rem;">
+                    <input type="text" name="spoiler_warning" class="composer-spoiler-input" placeholder="Spoiler context (e.g. Discusses final climax / surprise ending)..." style="width: 100%; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+                  </div>
+                </div>
+
                 <div class="soothing-actions-row" style="margin-top: 1rem;">
                   <button type="submit" class="btn btn-soothing-submit">
                     ✨ Post Peaceful Review
@@ -272,6 +793,15 @@
                 </div>
                 <textarea name="content" rows="3" required placeholder="Write a review tagged to {{ item.title }}... Share your thoughts, rating context, or standout moments..."></textarea>
               </div>
+              <div class="comment-spoiler-row" style="margin: 0.5rem 0 0 38px;">
+                <label class="checkbox-pin-pill" title="Mark review as spoiler">
+                  <input type="checkbox" name="is_spoiler" value="1" onchange="document.getElementById('commentSpoilerWarnWrap').style.display = this.checked ? 'block' : 'none'">
+                  ⚠️ Contains Spoilers
+                </label>
+                <div id="commentSpoilerWarnWrap" style="display:none; margin-top: 0.4rem;">
+                  <input type="text" name="spoiler_warning" placeholder="Spoiler note (e.g. Key plot twist revealed)..." style="width: 100%; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+                </div>
+              </div>
               <div class="comment-form-actions">
                 <span class="sentiment-hint">⚡ Sentiment analysis tags your review automatically</span>
                 <button type="submit" class="btn btn-small">Post Review</button>
@@ -314,7 +844,20 @@
                       {% endif %}
                     </div>
                     <div class="comment-body">
-                      {{ c.content }}
+                      {% if c.is_spoiler %}
+                        <div class="spoiler-container">
+                          <div class="spoiler-shield" onclick="this.parentElement.classList.toggle('spoiler-revealed')">
+                            <span class="spoiler-icon">⚠️</span>
+                            <span class="spoiler-msg">{{ c.spoiler_warning or 'Review Contains Plot / Outcome Spoilers' }}</span>
+                            <button type="button" class="btn-spoiler-toggle">Click to Reveal</button>
+                          </div>
+                          <div class="spoiler-hidden-content">
+                            {{ c.content }}
+                          </div>
+                        </div>
+                      {% else %}
+                        {{ c.content }}
+                      {% endif %}
                     </div>
                     <!-- Emoji reactions on reviews -->
                     <div class="feed-reactions-group comment-rxn-bar" id="reactions-post-{{ c.id }}">
@@ -423,6 +966,61 @@
         </div>
       </section>
 
+      <!-- Domain Specific Sidebar Widgets -->
+      {% if item.type == 'movie' and audience_critic_split and (audience_critic_split.critic_count > 0 or audience_critic_split.audience_count > 0) %}
+        <section class="detail-card detail-sidebar-split-widget">
+          <h3 class="sidebar-heading">👑 Critics vs. 🍿 Audience</h3>
+          <div class="hub-critic-audience-box">
+            <div class="split-scores-row">
+              <div class="split-col split-critics">
+                <span class="split-col-label">CRITICS</span>
+                <strong class="split-pct-val">{{ audience_critic_split.critic_pct }}%</strong>
+                <span class="split-sub text-muted-xs">{{ audience_critic_split.critic_avg }}★ ({{ audience_critic_split.critic_count }})</span>
+              </div>
+              <div class="split-divider-line"></div>
+              <div class="split-col split-audience">
+                <span class="split-col-label">AUDIENCE</span>
+                <strong class="split-pct-val">{{ audience_critic_split.audience_pct }}%</strong>
+                <span class="split-sub text-muted-xs">{{ audience_critic_split.audience_avg }}★ ({{ audience_critic_split.audience_count }})</span>
+              </div>
+            </div>
+            <div class="split-verdict-bar {{ audience_critic_split.verdict_class }}">
+              <span>{{ audience_critic_split.verdict }}</span>
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if item.type == 'song' and song_eval %}
+        <section class="detail-card detail-sidebar-song-widget">
+          <h3 class="sidebar-heading">🔁 Replay & Impact</h3>
+          <div class="song-sidebar-metrics">
+            <div class="sidebar-metric-row">
+              <span class="text-muted-xs">Replay Frequency:</span>
+              <strong class="replay-label-badge">{{ song_eval.replay_label }}</strong>
+            </div>
+            {% if song_eval.dominant_emotion %}
+              <div class="sidebar-metric-row" style="margin-top: 0.5rem;">
+                <span class="text-muted-xs">Dominant Emotion:</span>
+                <span class="emotion-badge emotion-{{ song_eval.dominant_emotion }}">{{ song_eval.dominant_emotion|title }}</span>
+              </div>
+            {% endif %}
+          </div>
+        </section>
+      {% endif %}
+
+      {% if item.type == 'team' and match_summary and match_summary.excitement_index > 0 %}
+        <section class="detail-card detail-sidebar-sports-widget">
+          <h3 class="sidebar-heading">⚡ Excitement Index</h3>
+          <div class="sports-excitement-box">
+            <div class="excitement-header">
+              <span class="excitement-tier-chip {{ match_summary.excitement_badge_class }}">{{ match_summary.excitement_tier }}</span>
+              <div class="excitement-score-big">{{ match_summary.excitement_index }}<span class="score-small">/100</span></div>
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
       <!-- Related Items of Same Type -->
       {% if related_items %}
         <section class="detail-card detail-related-widget">
@@ -529,7 +1127,7 @@
     } catch (e) {}
   }
 
-  // Live emoji reaction toggle via AJAX
+  // Live emoji reaction toggle via AJAX for reviews
   window.sendReaction = async function(postId, rxnType, btn) {
     {% if not g.user %}
       window.location.href = "{{ url_for('auth.login') }}";
@@ -563,6 +1161,53 @@
             }
           });
         }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // 1-Click quick reaction on item/song
+  window.toggleItemReaction = function(itemId, reactionKey, btnEl) {
+    fetch('/items/' + itemId + '/quick-react', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({ reaction: reactionKey })
+    })
+    .then(function(res) {
+      if (res.status === 401) {
+        window.location.href = '/auth/login';
+        return;
+      }
+      return res.json();
+    })
+    .then(function(data) {
+      if (data && data.success && data.reactions) {
+        var container = document.getElementById('detail-item-rxn-' + itemId);
+        if (container) {
+          var buttons = container.querySelectorAll('.hub-quick-rxn-btn');
+          buttons.forEach(function(b) {
+            var rk = b.getAttribute('data-reaction');
+            var cnt = data.reactions.counts[rk] || 0;
+            var numEl = b.querySelector('.rxn-count-num');
+            if (numEl) numEl.textContent = cnt > 0 ? cnt : '';
+            if (data.reactions.user_reaction === rk) {
+              b.classList.add('active');
+            } else {
+              b.classList.remove('active');
+            }
+          });
+        }
+      }
+    })
+    .catch(function(err) {
+      console.error('Item reaction error:', err);
+    });
+  };
+
   // Detail content tab switcher
   window.switchDetailTab = function(targetPaneId) {
     var tabs = document.querySelectorAll('.detail-tab-btn');
@@ -604,6 +1249,9 @@
     if (hash === '#trailer-section') window.switchDetailTab('pane-trailer');
     else if (hash === '#community-comments') window.switchDetailTab('pane-comments');
     else if (hash === '#soothing-review-card') window.switchDetailTab('pane-write-review');
+    else if (hash === '#pane-craft') window.switchDetailTab('pane-craft');
+    else if (hash === '#pane-audio') window.switchDetailTab('pane-audio');
+    else if (hash === '#pane-sports-arena') window.switchDetailTab('pane-sports-arena');
   }
 })();
 </script>

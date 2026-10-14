@@ -26,6 +26,9 @@
       </a>
       <nav class="site-nav">
         <a href="{{ url_for('items.browse') }}">Browse</a>
+        <a href="{{ url_for('items.movies_hub') }}" class="nav-hub-link" title="Movies: Craft ratings, Mood tags & Critics split">🎬 Movies</a>
+        <a href="{{ url_for('items.songs_hub') }}" class="nav-hub-link" title="Music: Emotion ratings, Replay value & Lyrics split">🎵 Music</a>
+        <a href="{{ url_for('items.sports_hub') }}" class="nav-hub-link" title="Sports: Thrill index, Predictions & Highlights">🏆 Sports</a>
         <a href="{{ url_for('collections.index') }}">Collections</a>
         <a href="{{ url_for('agent.index') }}" title="चित्राङ्कः (Chitrankah) - RAG AI Cinema & Ratings Agent">चित्राङ्कः (Chitrankah)</a>
         <a href="{{ url_for('feed.feed') }}">Feed</a>

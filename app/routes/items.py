@@ -8,6 +8,21 @@ from app.services.sentiment import analyze, label
 from app.services.movie_agent import MOVIE_KNOWLEDGE_BASE, SONG_KNOWLEDGE_BASE, resolve_movie_trailer
 from app.services.gamification import detect_polarization, get_user_badges, get_weekly_challenges
 from app.services.recommender import predict_rating
+from app.services.domain_intelligence import (
+    PRESET_MOVIE_MOODS,
+    PRESET_SONG_EMOTIONS,
+    QUICK_REACTION_META,
+    HIGHLIGHT_TYPE_META,
+    get_movie_aspect_ratings,
+    get_movie_audience_vs_critic_split,
+    get_item_mood_tags,
+    get_song_evaluation_summary,
+    get_item_quick_reactions,
+    get_sports_match_summary,
+    get_sports_highlight_votes,
+    get_sports_predictions_summary,
+    get_sports_prediction_leaderboard,
+)
 
 bp = Blueprint("items", __name__, url_prefix="/items")
 
@@ -452,6 +467,33 @@ def detail(item_id):
 
     polarization = detect_polarization(dict(rating_stats) if rating_stats else {})
 
+    # Domain-specific intelligence evaluations
+    aspect_ratings = get_movie_aspect_ratings(db, item_id) if item_dict["type"] == "movie" else None
+    audience_critic_split = get_movie_audience_vs_critic_split(db, item_id) if item_dict["type"] == "movie" else None
+    mood_tags = get_item_mood_tags(db, item_id)
+    song_eval = get_song_evaluation_summary(db, item_id) if item_dict["type"] == "song" else None
+    quick_reactions = get_item_quick_reactions(db, item_id, g.user["id"] if g.user else None)
+    match_summary = get_sports_match_summary(db, item_id) if item_dict["type"] == "team" else None
+    match_highlights = get_sports_highlight_votes(db, item_id) if item_dict["type"] == "team" else None
+    match_predictions = get_sports_predictions_summary(db, item_id, g.user["id"] if g.user else None) if item_dict["type"] == "team" else None
+
+    user_aspects = None
+    user_song_eval = None
+    user_match_rating = None
+    if g.user is not None:
+        if item_dict["type"] == "movie":
+            u_asp = db.execute("SELECT * FROM movie_aspect_ratings WHERE item_id = ? AND user_id = ?", (item_id, g.user["id"])).fetchone()
+            if u_asp:
+                user_aspects = dict(u_asp)
+        elif item_dict["type"] == "song":
+            u_se = db.execute("SELECT * FROM song_evaluations WHERE item_id = ? AND user_id = ?", (item_id, g.user["id"])).fetchone()
+            if u_se:
+                user_song_eval = dict(u_se)
+        elif item_dict["type"] == "team":
+            u_mr = db.execute("SELECT * FROM sports_match_ratings WHERE item_id = ? AND user_id = ?", (item_id, g.user["id"])).fetchone()
+            if u_mr:
+                user_match_rating = dict(u_mr)
+
     # Related items of the same type
     related_rows = db.execute(
         """
@@ -474,6 +516,20 @@ def detail(item_id):
         details=details,
         stats=dict(rating_stats) if rating_stats else {},
         polarization=polarization,
+        aspect_ratings=aspect_ratings,
+        audience_critic_split=audience_critic_split,
+        mood_tags=mood_tags,
+        preset_movie_moods=PRESET_MOVIE_MOODS,
+        song_eval=song_eval,
+        quick_reactions=quick_reactions,
+        reaction_meta=QUICK_REACTION_META,
+        match_summary=match_summary,
+        match_highlights=match_highlights,
+        highlight_meta=HIGHLIGHT_TYPE_META,
+        match_predictions=match_predictions,
+        user_aspects=user_aspects,
+        user_song_eval=user_song_eval,
+        user_match_rating=user_match_rating,
         user_rating=user_rating,
         user_collections=user_collections,
         comments=comments,
@@ -599,8 +655,12 @@ def add_comment(item_id):
     if request.is_json:
         data = request.get_json() or {}
         content = data.get("content", "").strip()
+        is_spoiler = 1 if (data.get("is_spoiler") in ("1", "true", "on", True, 1)) else 0
+        spoiler_warning = data.get("spoiler_warning", "").strip()
     else:
         content = request.form.get("content", "").strip()
+        is_spoiler = 1 if request.form.get("is_spoiler") in ("1", "true", "on", True, 1) else 0
+        spoiler_warning = request.form.get("spoiler_warning", "").strip()
 
     if not content:
         if is_ajax:
@@ -612,8 +672,8 @@ def add_comment(item_id):
     sentiment_text = label(score)
 
     cursor = db.execute(
-        "INSERT INTO posts (user_id, item_id, content, sentiment_score) VALUES (?, ?, ?, ?)",
-        (g.user["id"], item_id, content, score),
+        "INSERT INTO posts (user_id, item_id, content, sentiment_score, is_spoiler, spoiler_warning) VALUES (?, ?, ?, ?, ?, ?)",
+        (g.user["id"], item_id, content, score, is_spoiler, spoiler_warning),
     )
     db.commit()
     new_post_id = cursor.lastrowid
@@ -626,6 +686,8 @@ def add_comment(item_id):
                 "content": content,
                 "sentiment_score": score,
                 "sentiment_label": sentiment_text,
+                "is_spoiler": is_spoiler,
+                "spoiler_warning": spoiler_warning,
                 "username": g.user["username"],
                 "avatar_url": dict(g.user).get("avatar_url") or "",
                 "created_at_fmt": "Just now",
@@ -697,10 +759,14 @@ def submit_review(item_id):
         rating = int(data.get("rating", 0) or 0)
         content = (data.get("content") or "").strip()
         vibe_tag = (data.get("vibe_tag") or "").strip()
+        is_spoiler = 1 if (data.get("is_spoiler") in ("1", "true", "on", True, 1)) else 0
+        spoiler_warning = (data.get("spoiler_warning") or "").strip()
     else:
         rating = int(request.form.get("rating", 0) or 0)
         content = (request.form.get("content") or "").strip()
         vibe_tag = (request.form.get("vibe_tag") or "").strip()
+        is_spoiler = 1 if request.form.get("is_spoiler") in ("1", "true", "on", True, 1) else 0
+        spoiler_warning = (request.form.get("spoiler_warning") or "").strip()
 
     if rating < 1 or rating > 5:
         msg = "Please select a peaceful star rating between 1 and 5."
@@ -730,10 +796,10 @@ def submit_review(item_id):
         sentiment_text = label(score)
         cursor = db.execute(
             """
-            INSERT INTO posts (user_id, item_id, content, sentiment_score)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO posts (user_id, item_id, content, sentiment_score, is_spoiler, spoiler_warning)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (g.user["id"], item_id, full_content, score),
+            (g.user["id"], item_id, full_content, score, is_spoiler, spoiler_warning),
         )
         new_post_id = cursor.lastrowid
 
@@ -763,6 +829,8 @@ def submit_review(item_id):
                 "vibe_tag": vibe_tag,
                 "sentiment_score": score,
                 "sentiment_label": sentiment_text,
+                "is_spoiler": is_spoiler,
+                "spoiler_warning": spoiler_warning,
                 "username": g.user["username"],
                 "avatar_url": dict(g.user).get("avatar_url") or "",
                 "created_at_fmt": "Just now",
@@ -771,5 +839,413 @@ def submit_review(item_id):
 
     flash(f"Your peaceful review for '{item['title']}' has been recorded! (Sentiment: {sentiment_text})")
     return redirect(url_for("items.detail", item_id=item_id))
+
+
+# ===========================================================================
+# DEDICATED DOMAIN SECTIONS (MOVIES, SONGS, SPORTS)
+# ===========================================================================
+
+@bp.route("/movies")
+def movies_hub():
+    """Dedicated Movies Section Hub: multi-criteria aspect ratings, mood cloud, audience vs critic split."""
+    db = get_db()
+    active_mood = request.args.get("mood", "").strip().lower()
+    active_aspect = request.args.get("aspect", "").strip().lower()
+
+    movies = db.execute(
+        """
+        SELECT i.*,
+               COALESCE(ROUND(AVG(up.rating), 1), 0) AS avg_rating,
+               COUNT(up.rating) AS rating_count
+        FROM items i
+        LEFT JOIN user_preferences up ON i.id = up.item_id
+        WHERE i.type = 'movie'
+        GROUP BY i.id
+        ORDER BY avg_rating DESC, rating_count DESC
+        """
+    ).fetchall()
+    movie_list = [dict(m) for m in movies]
+    movie_list = with_image_urls(movie_list)
+
+    for m in movie_list:
+        m["aspects"] = get_movie_aspect_ratings(db, m["id"])
+        m["split"] = get_movie_audience_vs_critic_split(db, m["id"])
+        m["mood_tags"] = get_item_mood_tags(db, m["id"])
+        tags_raw = m.get("genre_tags") or ""
+        m["genres"] = [t.strip().title() for t in tags_raw.split(",") if t.strip()]
+
+    # Filter by mood if selected
+    if active_mood:
+        movie_list = [m for m in movie_list if any(t["mood"].lower() == active_mood for t in m["mood_tags"])]
+
+    # Filter/Sort by craft aspect
+    if active_aspect in ("storyline", "acting", "direction", "cinematography", "music"):
+        movie_list.sort(key=lambda m: m["aspects"]["aspects"].get(active_aspect, 0.0), reverse=True)
+
+    # Craft champions
+    best_story = max(movie_list, key=lambda m: m["aspects"]["aspects"].get("storyline", 0.0), default=None)
+    best_acting = max(movie_list, key=lambda m: m["aspects"]["aspects"].get("acting", 0.0), default=None)
+    best_direction = max(movie_list, key=lambda m: m["aspects"]["aspects"].get("direction", 0.0), default=None)
+    best_visuals = max(movie_list, key=lambda m: m["aspects"]["aspects"].get("cinematography", 0.0), default=None)
+    best_music = max(movie_list, key=lambda m: m["aspects"]["aspects"].get("music", 0.0), default=None)
+
+    # Recent reviews tagged to movies
+    recent_reviews = db.execute(
+        """
+        SELECT p.*, u.username, u.avatar_url, u.role as user_role, i.title as movie_title
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        JOIN items i ON p.item_id = i.id
+        WHERE i.type = 'movie'
+        ORDER BY p.created_at DESC LIMIT 6
+        """
+    ).fetchall()
+
+    return render_template(
+        "movies_hub.html",
+        movies=movie_list,
+        active_mood=active_mood,
+        active_aspect=active_aspect,
+        preset_moods=PRESET_MOVIE_MOODS,
+        best_story=best_story,
+        best_acting=best_acting,
+        best_direction=best_direction,
+        best_visuals=best_visuals,
+        best_music=best_music,
+        recent_reviews=recent_reviews,
+    )
+
+
+@bp.route("/songs")
+def songs_hub():
+    """Dedicated Music Section Hub: emotion impact, replay value, lyrics vs music balance, quick reactions."""
+    db = get_db()
+    active_emotion = request.args.get("emotion", "").strip().lower()
+
+    songs = db.execute(
+        """
+        SELECT i.*,
+               COALESCE(ROUND(AVG(up.rating), 1), 0) AS avg_rating,
+               COUNT(up.rating) AS rating_count
+        FROM items i
+        LEFT JOIN user_preferences up ON i.id = up.item_id
+        WHERE i.type = 'song'
+        GROUP BY i.id
+        ORDER BY avg_rating DESC, rating_count DESC
+        """
+    ).fetchall()
+    song_list = [dict(s) for s in songs]
+    song_list = with_image_urls(song_list)
+
+    user_id = g.user["id"] if g.user else None
+    for s in song_list:
+        s["eval"] = get_song_evaluation_summary(db, s["id"])
+        s["reactions"] = get_item_quick_reactions(db, s["id"], user_id)
+        tags_raw = s.get("genre_tags") or ""
+        s["genres"] = [t.strip().title() for t in tags_raw.split(",") if t.strip()]
+
+    if active_emotion:
+        song_list = [s for s in song_list if s["eval"].get("dominant_emotion") == active_emotion]
+
+    replay_heavy = sorted(song_list, key=lambda s: s["eval"].get("replay_value", 0.0), reverse=True)
+    lyrical_champions = sorted(song_list, key=lambda s: s["eval"].get("lyrics_score", 0.0), reverse=True)
+    sonic_champions = sorted(song_list, key=lambda s: s["eval"].get("music_score", 0.0), reverse=True)
+
+    return render_template(
+        "songs_hub.html",
+        songs=song_list,
+        active_emotion=active_emotion,
+        preset_emotions=PRESET_SONG_EMOTIONS,
+        reaction_meta=QUICK_REACTION_META,
+        replay_heavy=replay_heavy[:5],
+        lyrical_champions=lyrical_champions[:4],
+        sonic_champions=sonic_champions[:4],
+    )
+
+
+@bp.route("/sports")
+def sports_hub():
+    """Dedicated Sports Arena Hub: Match Excitement Index, prediction arena, highlight voting."""
+    db = get_db()
+    teams = db.execute(
+        """
+        SELECT i.*,
+               COALESCE(ROUND(AVG(up.rating), 1), 0) AS avg_rating,
+               COUNT(up.rating) AS rating_count
+        FROM items i
+        LEFT JOIN user_preferences up ON i.id = up.item_id
+        WHERE i.type = 'team'
+        GROUP BY i.id
+        ORDER BY avg_rating DESC
+        """
+    ).fetchall()
+    team_list = [dict(t) for t in teams]
+    team_list = with_image_urls(team_list)
+
+    user_id = g.user["id"] if g.user else None
+    for t in team_list:
+        t["match_summary"] = get_sports_match_summary(db, t["id"])
+        t["highlights"] = get_sports_highlight_votes(db, t["id"])
+        t["predictions"] = get_sports_predictions_summary(db, t["id"], user_id)
+        tags_raw = t.get("genre_tags") or ""
+        t["genres"] = [g_tag.strip().title() for g_tag in tags_raw.split(",") if g_tag.strip()]
+
+    thrillers = sorted(team_list, key=lambda t: t["match_summary"].get("excitement_index", 0), reverse=True)
+    prediction_leaderboard = get_sports_prediction_leaderboard(db, limit=10)
+
+    return render_template(
+        "sports_hub.html",
+        teams=team_list,
+        thrillers=thrillers,
+        prediction_leaderboard=prediction_leaderboard,
+        highlight_meta=HIGHLIGHT_TYPE_META,
+    )
+
+
+# ===========================================================================
+# INTERACTIVE DOMAIN RATING & SOCIAL ENDPOINTS
+# ===========================================================================
+
+@bp.route("/<int:item_id>/rate-aspects", methods=["POST"])
+@login_required
+def rate_aspects(item_id):
+    """Save 5-criteria aspect rating for a movie: storyline, acting, direction, cinematography, music."""
+    db = get_db()
+    data = request.get_json() if request.is_json else request.form
+    storyline = int(data.get("storyline", 5))
+    acting = int(data.get("acting", 5))
+    direction = int(data.get("direction", 5))
+    cinematography = int(data.get("cinematography", 5))
+    music = int(data.get("music", 5))
+
+    db.execute(
+        """
+        INSERT INTO movie_aspect_ratings (user_id, item_id, storyline, acting, direction, cinematography, music)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, item_id) DO UPDATE SET
+            storyline = excluded.storyline,
+            acting = excluded.acting,
+            direction = excluded.direction,
+            cinematography = excluded.cinematography,
+            music = excluded.music
+        """,
+        (g.user["id"], item_id, storyline, acting, direction, cinematography, music),
+    )
+    db.commit()
+
+    aspects = get_movie_aspect_ratings(db, item_id)
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "aspects": aspects})
+    flash("Cinematic aspect ratings saved successfully!")
+    return redirect(request.referrer or url_for("items.detail", item_id=item_id))
+
+
+@bp.route("/<int:item_id>/mood-tag", methods=["POST"])
+@login_required
+def add_mood_tag(item_id):
+    """Tag an item or movie with a community mood."""
+    db = get_db()
+    data = request.get_json() if request.is_json else request.form
+    mood = (data.get("mood") or "").strip().lower()
+    if not mood:
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": "Mood tag cannot be empty."}), 400
+        return redirect(request.referrer or url_for("items.detail", item_id=item_id))
+
+    db.execute(
+        """
+        INSERT OR IGNORE INTO item_mood_tags (item_id, user_id, mood)
+        VALUES (?, ?, ?)
+        """,
+        (item_id, g.user["id"], mood),
+    )
+    db.commit()
+
+    tags = get_item_mood_tags(db, item_id)
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "mood_tags": tags})
+    flash(f"Tagged movie with mood '{mood.title()}'!")
+    return redirect(request.referrer or url_for("items.detail", item_id=item_id))
+
+
+@bp.route("/<int:item_id>/evaluate-song", methods=["POST"])
+@login_required
+def evaluate_song(item_id):
+    """Save emotion, replay value, and lyrics vs. music split ratings for a song."""
+    db = get_db()
+    data = request.get_json() if request.is_json else request.form
+    emotion = data.get("emotion") or "chill"
+    replay_val = int(data.get("replay_value", 4))
+    lyrics = int(data.get("lyrics_score", 4))
+    music = int(data.get("music_score", 4))
+
+    db.execute(
+        """
+        INSERT INTO song_evaluations (user_id, item_id, emotion, replay_value, lyrics_score, music_score)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, item_id) DO UPDATE SET
+            emotion = excluded.emotion,
+            replay_value = excluded.replay_value,
+            lyrics_score = excluded.lyrics_score,
+            music_score = excluded.music_score
+        """,
+        (g.user["id"], item_id, emotion, replay_val, lyrics, music),
+    )
+    db.commit()
+
+    summary = get_song_evaluation_summary(db, item_id)
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "summary": summary})
+    flash("Song evaluation saved!")
+    return redirect(request.referrer or url_for("items.detail", item_id=item_id))
+
+
+@bp.route("/<int:item_id>/quick-react", methods=["POST"])
+@login_required
+def quick_react(item_id):
+    """Toggle 1-click emoji reaction on a catalog item or song (fire, love, vibe, energetic, masterpiece)."""
+    db = get_db()
+    data = request.get_json() if request.is_json else request.form
+    reaction = data.get("reaction") or "fire"
+
+    existing = db.execute(
+        "SELECT id FROM item_quick_reactions WHERE item_id = ? AND user_id = ? AND reaction = ?",
+        (item_id, g.user["id"], reaction),
+    ).fetchone()
+
+    if existing:
+        db.execute("DELETE FROM item_quick_reactions WHERE id = ?", (existing["id"],))
+    else:
+        db.execute(
+            """
+            INSERT OR REPLACE INTO item_quick_reactions (user_id, item_id, reaction)
+            VALUES (?, ?, ?)
+            """,
+            (g.user["id"], item_id, reaction),
+        )
+    db.commit()
+
+    reactions = get_item_quick_reactions(db, item_id, g.user["id"])
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "reactions": reactions})
+    return redirect(request.referrer or url_for("items.detail", item_id=item_id))
+
+
+@bp.route("/<int:item_id>/rate-match", methods=["POST"])
+@login_required
+def rate_match(item_id):
+    """Rate match excitement index: thrill level, competitiveness, memorable moments."""
+    db = get_db()
+    data = request.get_json() if request.is_json else request.form
+    thrill = int(data.get("thrill_level", 4))
+    comp = int(data.get("competitiveness", 4))
+    mem = int(data.get("memorable_moments", 4))
+
+    db.execute(
+        """
+        INSERT INTO sports_match_ratings (user_id, item_id, thrill_level, competitiveness, memorable_moments)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, item_id) DO UPDATE SET
+            thrill_level = excluded.thrill_level,
+            competitiveness = excluded.competitiveness,
+            memorable_moments = excluded.memorable_moments
+        """,
+        (g.user["id"], item_id, thrill, comp, mem),
+    )
+    db.commit()
+
+    summary = get_sports_match_summary(db, item_id)
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "summary": summary})
+    flash("Match excitement rating submitted!")
+    return redirect(request.referrer or url_for("items.detail", item_id=item_id))
+
+
+@bp.route("/<int:item_id>/predict", methods=["POST"])
+@login_required
+def submit_prediction(item_id):
+    """Submit match outcome prediction to earn credibility points and accuracy score."""
+    db = get_db()
+    data = request.get_json() if request.is_json else request.form
+    predicted_outcome = data.get("predicted_outcome", "Home Win")
+    confidence_points = int(data.get("confidence_points", 10))
+
+    db.execute(
+        """
+        INSERT INTO sports_predictions (user_id, item_id, predicted_outcome, confidence_points, points_awarded)
+        VALUES (?, ?, ?, ?, 10)
+        ON CONFLICT(user_id, item_id) DO UPDATE SET
+            predicted_outcome = excluded.predicted_outcome,
+            confidence_points = excluded.confidence_points
+        """,
+        (g.user["id"], item_id, predicted_outcome, confidence_points),
+    )
+    db.commit()
+
+    summary = get_sports_predictions_summary(db, item_id, g.user["id"])
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "predictions": summary})
+    flash("Match prediction locked in!")
+    return redirect(request.referrer or url_for("items.sports_hub"))
+
+
+@bp.route("/<int:item_id>/vote-highlight", methods=["POST"])
+@login_required
+def vote_highlight(item_id):
+    """Vote for match highlight (Best Play, Turning Point, Clutch Moment)."""
+    db = get_db()
+    data = request.get_json() if request.is_json else request.form
+    highlight_type = data.get("highlight_type", "best_play")
+    title = (data.get("highlight_title") or "Match Highlight").strip()
+
+    db.execute(
+        """
+        INSERT INTO sports_highlight_votes (user_id, item_id, highlight_type, highlight_title)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id, item_id, highlight_type) DO UPDATE SET
+            highlight_title = excluded.highlight_title
+        """,
+        (g.user["id"], item_id, highlight_type, title),
+    )
+    db.commit()
+
+    highlights = get_sports_highlight_votes(db, item_id)
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "highlights": highlights})
+    flash("Highlight vote recorded!")
+    return redirect(request.referrer or url_for("items.detail", item_id=item_id))
+
+
+@bp.route("/<int:item_id>/rate-player", methods=["POST"])
+@login_required
+def rate_player(item_id):
+    """Rate individual standout player performance (1-10) and nominate match MVP."""
+    db = get_db()
+    data = request.get_json() if request.is_json else request.form
+    player_name = (data.get("player_name") or "").strip()
+    rating = int(data.get("rating", 8))
+    is_mvp = 1 if data.get("is_mvp") in ("1", "true", "on", True, 1) else 0
+
+    if not player_name:
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": "Player name required."}), 400
+        return redirect(request.referrer or url_for("items.detail", item_id=item_id))
+
+    db.execute(
+        """
+        INSERT INTO sports_player_ratings (user_id, item_id, player_name, rating, is_mvp)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, item_id, player_name) DO UPDATE SET
+            rating = excluded.rating,
+            is_mvp = excluded.is_mvp
+        """,
+        (g.user["id"], item_id, player_name, rating, is_mvp),
+    )
+    db.commit()
+
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "player_name": player_name, "rating": rating})
+    flash(f"Performance rating for '{player_name}' saved!")
+    return redirect(request.referrer or url_for("items.detail", item_id=item_id))
 
 

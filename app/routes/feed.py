@@ -21,18 +21,22 @@ def feed():
         content = request.form["content"].strip()
         item_id = request.form.get("item_id") or None
         is_pinned = 1 if (g.user["role"] == "admin" and request.form.get("is_pinned")) else 0
+        is_spoiler = 1 if request.form.get("is_spoiler") in ("1", "true", "on", True) else 0
+        spoiler_warning = request.form.get("spoiler_warning", "").strip()
         if not content:
             flash("Post can't be empty.")
         else:
             score = analyze(content)
             db.execute(
-                "INSERT INTO posts (user_id, item_id, content, sentiment_score, is_pinned) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (g.user["id"], item_id, content, score, is_pinned),
+                "INSERT INTO posts (user_id, item_id, content, sentiment_score, is_pinned, is_spoiler, spoiler_warning) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (g.user["id"], item_id, content, score, is_pinned, is_spoiler, spoiler_warning),
             )
             db.commit()
             if is_pinned:
                 flash("Official announcement published and pinned to feed!")
+            elif is_spoiler:
+                flash("Spoiler-shielded post published safely!")
         return redirect(url_for("feed.feed"))
 
     filter_tab = request.args.get("filter", "all")

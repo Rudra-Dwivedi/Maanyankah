@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS posts (
     content TEXT NOT NULL,
     sentiment_score REAL,
     is_pinned INTEGER NOT NULL DEFAULT 0,
+    is_spoiler INTEGER NOT NULL DEFAULT 0,
+    spoiler_warning TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -120,5 +122,101 @@ CREATE TABLE IF NOT EXISTS collection_comments (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 🎬 Movies: Multi-criteria aspect ratings (Storyline, Acting, Direction, Cinematography, Music)
+CREATE TABLE IF NOT EXISTS movie_aspect_ratings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    storyline INTEGER CHECK (storyline BETWEEN 1 AND 5),
+    acting INTEGER CHECK (acting BETWEEN 1 AND 5),
+    direction INTEGER CHECK (direction BETWEEN 1 AND 5),
+    cinematography INTEGER CHECK (cinematography BETWEEN 1 AND 5),
+    music INTEGER CHECK (music BETWEEN 1 AND 5),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, item_id)
+);
+
+-- Community mood tags (e.g., "chill", "intense", "family-friendly", "mind-bending", "dark", "heartfelt")
+CREATE TABLE IF NOT EXISTS item_mood_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    mood TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(item_id, user_id, mood)
+);
+
+-- 🎵 Songs: Emotion-based ratings, replay value, and lyrics vs. music split
+CREATE TABLE IF NOT EXISTS song_evaluations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    emotion TEXT CHECK (emotion IN ('happy', 'sad', 'energetic', 'chill', 'melancholic', 'euphoric', 'romantic')),
+    replay_value INTEGER CHECK (replay_value BETWEEN 1 AND 5), -- 1=Rarely, 3=Occasional, 5=Daily on Repeat 🔥
+    lyrics_score INTEGER CHECK (lyrics_score BETWEEN 1 AND 5),
+    music_score INTEGER CHECK (music_score BETWEEN 1 AND 5),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, item_id)
+);
+
+-- Quick emoji reactions on catalog items/songs (🔥, ❤️, 🎶, ⚡, 🎧)
+CREATE TABLE IF NOT EXISTS item_quick_reactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    reaction TEXT NOT NULL CHECK (reaction IN ('fire', 'love', 'vibe', 'energetic', 'masterpiece')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, item_id, reaction)
+);
+
+-- 🏆 Sports: Match excitement index (Thrill, Competitiveness, Memorable Moments)
+CREATE TABLE IF NOT EXISTS sports_match_ratings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    thrill_level INTEGER CHECK (thrill_level BETWEEN 1 AND 5),
+    competitiveness INTEGER CHECK (competitiveness BETWEEN 1 AND 5),
+    memorable_moments INTEGER CHECK (memorable_moments BETWEEN 1 AND 5),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, item_id)
+);
+
+-- 🏆 Sports: Player performance ratings & MVP nominations
+CREATE TABLE IF NOT EXISTS sports_player_ratings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    player_name TEXT NOT NULL,
+    rating INTEGER CHECK (rating BETWEEN 1 AND 10),
+    is_mvp INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, item_id, player_name)
+);
+
+-- 🏆 Sports: Match outcome predictions & fan credibility points
+CREATE TABLE IF NOT EXISTS sports_predictions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    predicted_outcome TEXT NOT NULL, -- e.g. "Home Win", "Away Win", "Draw"
+    confidence_points INTEGER NOT NULL DEFAULT 10,
+    actual_outcome TEXT,             -- Filled upon match resolution
+    is_correct INTEGER,              -- NULL=pending, 1=correct, 0=incorrect
+    points_awarded INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, item_id)
+);
+
+-- 🏆 Sports: Highlight voting ("Best Play", "Turning Point", "Clutch Moment")
+CREATE TABLE IF NOT EXISTS sports_highlight_votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    highlight_type TEXT NOT NULL CHECK (highlight_type IN ('best_play', 'turning_point', 'clutch_moment', 'mvp_performance')),
+    highlight_title TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, item_id, highlight_type)
 );
 

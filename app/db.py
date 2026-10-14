@@ -68,11 +68,15 @@ def init_db(app):
         if "last_login" not in user_columns:
             cursor.execute("ALTER TABLE users ADD COLUMN last_login TIMESTAMP")
 
-        # Migration: ensure posts table has is_pinned column
+        # Migration: ensure posts table has is_pinned, is_spoiler and spoiler_warning columns
         cursor.execute("PRAGMA table_info(posts)")
         post_columns = [row[1] for row in cursor.fetchall()]
         if "is_pinned" not in post_columns:
             cursor.execute("ALTER TABLE posts ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0")
+        if "is_spoiler" not in post_columns:
+            cursor.execute("ALTER TABLE posts ADD COLUMN is_spoiler INTEGER NOT NULL DEFAULT 0")
+        if "spoiler_warning" not in post_columns:
+            cursor.execute("ALTER TABLE posts ADD COLUMN spoiler_warning TEXT")
 
         # Migration: ensure unique indexes on items table to prevent duplicate catalog entries
         cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_items_unique_type_title ON items(type, LOWER(TRIM(title)))")

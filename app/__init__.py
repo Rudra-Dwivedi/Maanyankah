@@ -7,7 +7,11 @@ from app.auth_utils import load_logged_in_user
 
 def create_app(config_class=Config):
     app = Flask(__name__)
-    app.config.from_object(config_class)
+    if isinstance(config_class, dict):
+        app.config.from_object(Config)
+        app.config.update(config_class)
+    else:
+        app.config.from_object(config_class)
 
     register_db(app)
 
@@ -36,6 +40,24 @@ def create_app(config_class=Config):
     @app.route("/")
     def index():
         return render_template("index.html", user=g.user)
+
+    @app.route("/movies")
+    @app.route("/movies/")
+    def movies_shortcut():
+        from flask import redirect, url_for
+        return redirect(url_for("items.movies_hub"))
+
+    @app.route("/songs")
+    @app.route("/songs/")
+    def songs_shortcut():
+        from flask import redirect, url_for
+        return redirect(url_for("items.songs_hub"))
+
+    @app.route("/sports")
+    @app.route("/sports/")
+    def sports_shortcut():
+        from flask import redirect, url_for
+        return redirect(url_for("items.sports_hub"))
 
     @app.errorhandler(403)
     def forbidden(e):

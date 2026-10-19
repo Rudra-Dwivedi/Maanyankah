@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Start a Watch Party — मान्यांकः (Maanyankah){% endblock %}
+
+{% block content %}
+<div class="container page">
+
+  <!-- Breadcrumbs -->
+  <nav class="detail-breadcrumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('watch_party.index') }}" class="breadcrumb-link">Watch Parties</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Start Party</span>
+  </nav>
+
+  <div class="watch-party-create-container">
+    <div class="page-head page-head-compact">
+      <h1>Start a Watch Party 🎉</h1>
+      <p class="page-sub">Host a synchronized screening room for movies, music videos, or sports match highlights with live chat and reaction bursts.</p>
+    </div>
+
+    <form method="post" action="{{ url_for('watch_party.create') }}" class="watch-party-form">
+      <div class="form-grid-two-col">
+
+        <!-- Left Column: Room Theme & Selection -->
+        <div class="upload-media-card">
+          <h2 class="upload-section-title">1. What are we watching?</h2>
+
+          <!-- Category Segmented Control -->
+          <div class="party-category-selector" role="radiogroup">
+            <label class="cat-select-radio {{ 'active' if prefill_category == 'movie' }}">
+              <input type="radio" name="category" value="movie" {{ 'checked' if prefill_category == 'movie' }} onchange="onCategoryChange('movie')">
+              <span>🎬 Movie</span>
+            </label>
+            <label class="cat-select-radio {{ 'active' if prefill_category == 'song' }}">
+              <input type="radio" name="category" value="song" {{ 'checked' if prefill_category == 'song' }} onchange="onCategoryChange('song')">
+              <span>🎵 Music</span>
+            </label>
+            <label class="cat-select-radio {{ 'active' if prefill_category == 'sports' }}">
+              <input type="radio" name="category" value="sports" {{ 'checked' if prefill_category == 'sports' }} onchange="onCategoryChange('sports')">
+              <span>🏆 Sports</span>
+            </label>
+          </div>
+
+          <!-- Select from Catalog Items -->
+          <div class="form-group" style="margin-top: 1.2rem;">
+            <label for="catalog_item_select" class="form-label">Pick from Catalog (Optional):</label>
+            <select name="item_id" id="catalog_item_select" class="form-control" onchange="onCatalogSelect(this)">
+              <option value="">-- Or enter custom stream below --</option>
+              
+              <optgroup label="🎬 Movies">
+                {% for m in catalog_movies %}
+                  <option value="{{ m.id }}" data-title="{{ m.title }}" data-cat="movie" {{ 'selected' if prefill_item and prefill_item.id == m.id }}>
+                    {{ m.title }}
+                  </option>
+                {% endfor %}
+              </optgroup>
+
+              <optgroup label="🎵 Music Tracks">
+                {% for s in catalog_songs %}
+                  <option value="{{ s.id }}" data-title="{{ s.title }}" data-cat="song" {{ 'selected' if prefill_item and prefill_item.id == s.id }}>
+                    {{ s.title }}
+                  </option>
+                {% endfor %}
+              </optgroup>
+
+              <optgroup label="🏆 Sports Teams / Matches">
+                {% for t in catalog_sports %}
+                  <option value="{{ t.id }}" data-title="{{ t.title }}" data-cat="sports" {{ 'selected' if prefill_item and prefill_item.id == t.id }}>
+                    {{ t.title }}
+                  </option>
+                {% endfor %}
+              </optgroup>
+            </select>
+            <span class="form-field-hint">Auto-loads official trailer, music video, or sports highlights!</span>
+          </div>
+
+          <!-- Select from Community Short Films -->
+          {% if community_shorts %}
+            <div class="form-group">
+              <label for="short_film_select" class="form-label">Or Pick a Community Short Film:</label>
+              <select name="short_film_id" id="short_film_select" class="form-control" onchange="onShortSelect(this)">
+                <option value="">-- None (use catalog or custom link) --</option>
+                {% for sf in community_shorts %}
+                  <option value="{{ sf.id }}" data-title="Premiere: {{ sf.title }}" {{ 'selected' if prefill_short and prefill_short.id == sf.id }}>
+                    🎥 {{ sf.title }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          {% endif %}
+
+          <!-- Video Stream Link -->
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="video_url" class="form-label">Video Stream URL (YouTube, Vimeo, or MP4):</label>
+            <input type="url"
+                   name="video_url"
+                   id="video_url"
+                   class="form-control"
+                   placeholder="https://www.youtube.com/watch?v=... (Optional if item selected)">
+            <span class="form-field-hint">Leave blank to use the item's official trailer/stream, or paste any video link.</span>
+          </div>
+        </div>
+
+        <!-- Right Column: Room Settings -->
+        <div class="upload-meta-card">
+          <h2 class="upload-section-title">2. Room Atmosphere & Details</h2>
+
+          <div class="form-group">
+            <label for="party_title" class="form-label">Party Room Name *</label>
+            <input type="text"
+                   name="title"
+                   id="party_title"
+                   class="form-control"
+                   required
+                   value="{% if prefill_item %}{{ prefill_item.title }} Watch Party 🍿{% elif prefill_short %}Premiere Watch Party: {{ prefill_short.title }} 🎬{% else %}Live Screening Lounge 🎉{% endif %}"
+                   placeholder="e.g. Late Night Interstellar Crew 🍿">
+          </div>
+
+          <div class="form-group">
+            <label for="party_description" class="form-label">Host Welcoming Message & Note</label>
+            <textarea name="description"
+                      id="party_description"
+                      rows="4"
+                      class="form-control"
+                      placeholder="Welcome friends! Let them know what to expect, grab popcorn, and get ready to chat..."></textarea>
+          </div>
+
+          <div class="party-feature-highlights">
+            <div class="feature-item">
+              <span class="feature-icon">⚡</span>
+              <div>
+                <strong>Host Playback Synchronization</strong>
+                <span class="feature-desc">When the host plays, pauses, or seeks, all viewers stay in sync.</span>
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">💬</span>
+              <div>
+                <strong>Live Party Chat</strong>
+                <span class="feature-desc">Real-time messaging with timestamp reactions and member avatars.</span>
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🔥</span>
+              <div>
+                <strong>Floating Emoji Bursts</strong>
+                <span class="feature-desc">Cheer or react in real time with floating reaction bursts on screen.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="upload-submit-row" style="margin-top: 1.5rem;">
+            <button type="submit" class="btn btn-primary-submit btn-accent-glow">
+              🎉 Launch Watch Party Room
+            </button>
+            <a href="{{ url_for('watch_party.index') }}" class="link-muted">Cancel</a>
+          </div>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<script>
+function onCategoryChange(cat) {
+  var radios = document.querySelectorAll('.cat-select-radio');
+  radios.forEach(function(r) {
+    if (r.querySelector('input').value === cat) {
+      r.classList.add('active');
+    } else {
+      r.classList.remove('active');
+    }
+  });
+}
+
+function onCatalogSelect(sel) {
+  var opt = sel.options[sel.selectedIndex];
+  if (opt && opt.value) {
+    var title = opt.getAttribute('data-title');
+    var cat = opt.getAttribute('data-cat');
+    var titleInput = document.getElementById('party_title');
+    if (title) {
+      titleInput.value = title + ' Watch Party 🍿';
+    }
+    if (cat) {
+      var radio = document.querySelector('input[name="category"][value="' + cat + '"]');
+      if (radio) {
+        radio.checked = true;
+        onCategoryChange(cat);
+      }
+    }
+    var shortSel = document.getElementById('short_film_select');
+    if (shortSel) shortSel.value = '';
+  }
+}
+
+function onShortSelect(sel) {
+  var opt = sel.options[sel.selectedIndex];
+  if (opt && opt.value) {
+    var title = opt.getAttribute('data-title');
+    var titleInput = document.getElementById('party_title');
+    if (title) {
+      titleInput.value = title + ' 🎬';
+    }
+    var radio = document.querySelector('input[name="category"][value="movie"]');
+    if (radio) {
+      radio.checked = true;
+      onCategoryChange('movie');
+    }
+    var catSel = document.getElementById('catalog_item_select');
+    if (catSel) catSel.value = '';
+  }
+}
+</script>
+{% endblock %}

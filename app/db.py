@@ -123,6 +123,120 @@ def init_db(app):
                     if item_row:
                         cursor.execute("INSERT OR IGNORE INTO collection_items (collection_id, item_id) VALUES (?, ?)", (cid2, item_row[0]))
 
+        # Seed initial curated short films if short_films table is empty
+        cursor.execute("SELECT COUNT(*) FROM short_films")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1")
+            first_user = cursor.fetchone()
+            if not first_user:
+                cursor.execute(
+                    "INSERT INTO users (username, email, password_hash, role) VALUES ('filmmaker', 'filmmaker@fannetwork.local', ?, 'user')",
+                    (generate_password_hash("filmmaker123"),),
+                )
+                creator_id = cursor.lastrowid
+            else:
+                creator_id = first_user[0]
+
+            demo_shorts = [
+                (
+                    creator_id,
+                    "The Last Transmission",
+                    "Deep in the Kuiper belt, a lonely orbital communications officer intercepts an encrypted audio beacon carrying coordinates to an unknown object.",
+                    "Maya Lin",
+                    "8 min",
+                    "Sci-Fi, Mystery",
+                    "https://www.youtube.com/watch?v=zSWdZVtXT7E",
+                    "youtube",
+                    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80",
+                    142,
+                ),
+                (
+                    creator_id,
+                    "Midnight Raga",
+                    "An evocative nocturnal journey through ancient ghats and monsoon alleyways as a young classical sitarist plays for an unseen audience.",
+                    "Kabir Sen",
+                    "6 min",
+                    "Musical, Drama",
+                    "https://www.youtube.com/watch?v=fJ9rUzIMcZQ",
+                    "youtube",
+                    "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80",
+                    98,
+                ),
+                (
+                    creator_id,
+                    "Clutch Point: The 90th Minute",
+                    "A heart-stopping, cinematic look at high-stakes pressure, tactical nerve, and the psychology of athletes in decisive tournament moments.",
+                    "Arjun Varma",
+                    "5 min",
+                    "Sports, Documentary",
+                    "https://www.youtube.com/watch?v=qC50WbA-u3o",
+                    "youtube",
+                    "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80",
+                    215,
+                ),
+            ]
+            for s in demo_shorts:
+                cursor.execute(
+                    """INSERT INTO short_films 
+                       (user_id, title, description, director_name, duration, genre_tags, video_url, video_type, thumbnail_url, views_count)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    s,
+                )
+                short_id = cursor.lastrowid
+                # Seed initial reaction and comment for realistic community feel
+                cursor.execute("INSERT OR IGNORE INTO short_film_reactions (short_id, user_id, reaction) VALUES (?, ?, 'fire')", (short_id, creator_id))
+                cursor.execute("INSERT OR IGNORE INTO short_film_reactions (short_id, user_id, reaction) VALUES (?, ?, 'cinema')", (short_id, creator_id))
+                cursor.execute(
+                    "INSERT INTO short_film_comments (short_id, user_id, content, timestamp_mark) VALUES (?, ?, ?, ?)",
+                    (short_id, creator_id, "Incredible sound design and camera work in this sequence!", "02:15"),
+                )
+
+        # Seed initial public watch parties if watch_parties table is empty
+        cursor.execute("SELECT COUNT(*) FROM watch_parties")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1")
+            first_user = cursor.fetchone()
+            if first_user:
+                host_uid = first_user[0]
+                # 1. Movie Party
+                cursor.execute("SELECT id FROM items WHERE title = 'Inception' LIMIT 1")
+                mov = cursor.fetchone()
+                mov_id = mov[0] if mov else None
+                cursor.execute(
+                    """INSERT INTO watch_parties 
+                       (host_id, item_id, category, title, description, video_url, video_type, status)
+                       VALUES (?, ?, 'movie', 'Late Night Inception Crew 🍿', 'Mind-bending cinema watch lounge. Come discuss the dream levels in real time!', 'https://www.youtube.com/watch?v=YoHD9XEInc0', 'youtube', 'active')""",
+                    (host_uid, mov_id),
+                )
+                wp1 = cursor.lastrowid
+                cursor.execute("INSERT INTO watch_party_messages (party_id, user_id, content) VALUES (?, ?, 'Welcome to the watch party! Grab your popcorn 🍿')", (wp1, host_uid))
+
+                # 2. Music Party
+                cursor.execute("SELECT id FROM items WHERE title LIKE 'Blinding Lights%' LIMIT 1")
+                song = cursor.fetchone()
+                song_id = song[0] if song else None
+                cursor.execute(
+                    """INSERT INTO watch_parties 
+                       (host_id, item_id, category, title, description, video_url, video_type, status)
+                       VALUES (?, ?, 'song', 'Synthwave & Midnight Rhythms 🎵', 'Vibing to The Weeknd and high-energy music videos together. Drop reaction bursts!', 'https://www.youtube.com/watch?v=4NRXx6U8ABQ', 'youtube', 'active')""",
+                    (host_uid, song_id),
+                )
+                wp2 = cursor.lastrowid
+                cursor.execute("INSERT INTO watch_party_messages (party_id, user_id, content) VALUES (?, ?, 'This bassline never gets old 🔥')", (wp2, host_uid))
+
+                # 3. Sports Party
+                cursor.execute("SELECT id FROM items WHERE title = 'Real Madrid' LIMIT 1")
+                sp = cursor.fetchone()
+                sp_id = sp[0] if sp else None
+                cursor.execute(
+                    """INSERT INTO watch_parties 
+                       (host_id, item_id, category, title, description, video_url, video_type, status)
+                       VALUES (?, ?, 'sports', 'Real Madrid Epic UCL Thrillers 🏆', 'Rewatching iconic match turning points and miracle goals with passionate fans!', 'https://www.youtube.com/watch?v=qC50WbA-u3o', 'youtube', 'active')""",
+                    (host_uid, sp_id),
+                )
+                wp3 = cursor.lastrowid
+                cursor.execute("INSERT INTO watch_party_messages (party_id, user_id, content) VALUES (?, ?, 'What a match this was! Incredible intensity ⚽')", (wp3, host_uid))
+
         # Optional auto-provision of admin via environment variables (e.g. Railway Variables)
         admin_user = os.environ.get("ADMIN_USERNAME", "").strip()
         admin_pass = os.environ.get("ADMIN_PASSWORD", "").strip()

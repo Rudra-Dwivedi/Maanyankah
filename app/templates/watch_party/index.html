@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Live Watch Parties — मान्यांकः (Maanyankah){% endblock %}
+
+{% block content %}
+<div class="container page">
+
+  <!-- Header -->
+  <div class="page-head page-head-compact">
+    <div class="page-head-title-row">
+      <h1>Live Watch Parties 🎉</h1>
+      <span class="badge-count">{{ parties|length }} active</span>
+    </div>
+    <div class="page-head-actions">
+      {% if g.user %}
+        <a href="{{ url_for('watch_party.create') }}" class="btn btn-small btn-accent-glow">
+          + Start a Watch Party 🎉
+        </a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-small">
+          Log in to Host Party
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <p class="page-sub">
+    Stream movies, music videos, and thrilling sports moments together with friends. Featuring synchronized playback, real-time chat, and floating reaction bursts.
+  </p>
+
+  <!-- Filter & Command Bar -->
+  <div class="unified-command-bar">
+    <form method="get" action="{{ url_for('watch_party.index') }}" class="command-bar-main-row">
+      <div class="search-input-wrapper">
+        <span class="search-input-icon">🔍</span>
+        <input type="text"
+               name="q"
+               class="search-input-field"
+               value="{{ search_q }}"
+               placeholder="Search active parties by title or movie..."
+               autocomplete="off">
+        {% if search_q %}
+          <a href="{{ url_for('watch_party.index', category=active_cat) }}" class="search-clear-btn" title="Clear search">✕</a>
+        {% endif %}
+      </div>
+      <button type="submit" class="btn-search-submit">Search</button>
+
+      <!-- Category Filter Tabs: All, Movies, Music, Sports -->
+      <div class="command-category-tabs">
+        <a href="{{ url_for('watch_party.index', q=search_q) }}" class="{{ 'active' if not active_cat }}">All</a>
+        <a href="{{ url_for('watch_party.index', category='movie', q=search_q) }}" class="{{ 'active' if active_cat == 'movie' }}">Movies 🎬</a>
+        <a href="{{ url_for('watch_party.index', category='song', q=search_q) }}" class="{{ 'active' if active_cat == 'song' }}">Music 🎵</a>
+        <a href="{{ url_for('watch_party.index', category='sports', q=search_q) }}" class="{{ 'active' if active_cat == 'sports' }}">Sports 🏆</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Parties Grid -->
+  {% if parties %}
+    <div class="watch-parties-grid">
+      {% for party in parties %}
+        <article class="watch-party-card card-cat-{{ party.category }}">
+          <div class="party-card-media">
+            <a href="{{ url_for('watch_party.room', party_id=party.id) }}" class="party-thumb-link">
+              {% if party.short_thumb %}
+                <img src="{{ party.short_thumb }}" alt="{{ party.title }}" class="party-thumb-img">
+              {% elif party.video_info.thumbnail_url %}
+                <img src="{{ party.video_info.thumbnail_url }}" alt="{{ party.title }}" class="party-thumb-img">
+              {% else %}
+                <div class="party-placeholder-icon">
+                  {% if party.category == 'movie' %}🎬{% elif party.category == 'song' %}🎵{% else %}🏆{% endif %}
+                </div>
+              {% endif %}
+              <div class="party-media-overlay">
+                <span class="party-play-pill">▶ Enter Room</span>
+              </div>
+            </a>
+
+            <!-- Badges -->
+            <div class="party-floating-top">
+              <span class="party-cat-chip cat-{{ party.category }}">
+                {% if party.category == 'movie' %}🎬 Movie{% elif party.category == 'song' %}🎵 Music{% else %}🏆 Sports{% endif %}
+              </span>
+              <span class="party-live-pill">
+                <span class="live-dot-pulse"></span> {{ party.active_viewers }} in room
+              </span>
+            </div>
+          </div>
+
+          <div class="party-card-body">
+            <h3 class="party-card-title">
+              <a href="{{ url_for('watch_party.room', party_id=party.id) }}">{{ party.title }}</a>
+            </h3>
+
+            {% if party.item_title %}
+              <span class="party-linked-item">Watching: <strong>{{ party.item_title }}</strong></span>
+            {% elif party.short_title %}
+              <span class="party-linked-item">Premiere: <strong>{{ party.short_title }}</strong></span>
+            {% endif %}
+
+            <p class="party-card-desc">
+              {{ party.description[:110] }}{% if party.description|length > 110 %}...{% endif %}
+            </p>
+
+            <div class="party-card-footer">
+              <div class="party-host-info">
+                {% if party.host_avatar %}
+                  <img src="{{ party.host_avatar }}" alt="{{ party.host_username }}" class="host-mini-avatar">
+                {% else %}
+                  <span class="host-avatar-char">{{ party.host_username[0]|upper }}</span>
+                {% endif %}
+                <span class="host-label">Host: <strong>@{{ party.host_username }}</strong></span>
+              </div>
+
+              <a href="{{ url_for('watch_party.room', party_id=party.id) }}" class="btn-micro btn-join-party">
+                Join Party ▶
+              </a>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>No active watch parties right now in this category.</p>
+      <p class="empty-sub">Be the first to open a room for your favorite movie, track, or match highlights!</p>
+      {% if g.user %}
+        <a href="{{ url_for('watch_party.create') }}" class="btn btn-small" style="margin-top: 0.8rem;">
+          + Start a Watch Party
+        </a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-small" style="margin-top: 0.8rem;">
+          Log in to Host
+        </a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

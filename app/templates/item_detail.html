@@ -97,6 +97,9 @@
             ▶ Watch Trailer
           </button>
         {% endif %}
+        <a href="{{ url_for('watch_party.create', item_id=item.id) }}" class="btn btn-party-start-btn" title="Host a live Watch Party for {{ item.title }} with friends">
+          🎉 Watch Party
+        </a>
         {% if item.type == 'movie' %}
           <button type="button" class="btn btn-soothing-jump" onclick="window.switchDetailTab ? window.switchDetailTab('pane-write-review') : document.getElementById('soothing-review-card')?.scrollIntoView({behavior: 'smooth'})">
             ✍️ Review Movie

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Short Films & Indie Cinema — मान्यांकः (Maanyankah){% endblock %}
+
+{% block content %}
+<div class="container page">
+
+  <!-- Header Row -->
+  <div class="page-head page-head-compact">
+    <div class="page-head-title-row">
+      <h1>Short Films & Indie Cinema 🎬</h1>
+      <span class="badge-count">{{ shorts|length }} films</span>
+    </div>
+    <div class="page-head-actions">
+      {% if g.user %}
+        <a href="{{ url_for('shorts.upload') }}" class="btn btn-small btn-accent-glow">
+          + Submit Short Film 🎥
+        </a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-small">
+          Log in to Upload Film
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <p class="page-sub">Discover, watch, and discuss original short movies, animations, and indie films created by the community.</p>
+
+  <!-- Featured Spotlight Banner (if shorts exist) -->
+  {% if spotlight %}
+    <section class="shorts-spotlight-banner">
+      <div class="spotlight-thumb-wrap">
+        {% if spotlight.thumbnail_url %}
+          <img src="{{ spotlight.thumbnail_url }}" alt="{{ spotlight.title }}" class="spotlight-thumb-img">
+        {% else %}
+          <div class="spotlight-placeholder">🎬</div>
+        {% endif %}
+        <span class="spotlight-duration-pill">⏱️ {{ spotlight.duration }}</span>
+      </div>
+      <div class="spotlight-details">
+        <div class="spotlight-meta-top">
+          <span class="badge-spotlight-tag">🌟 COMMUNITY SPOTLIGHT</span>
+          <span class="spotlight-genre-tag">{{ spotlight.genre_tags }}</span>
+        </div>
+        <h2 class="spotlight-title">
+          <a href="{{ url_for('shorts.detail', short_id=spotlight.id) }}">{{ spotlight.title }}</a>
+        </h2>
+        <p class="spotlight-director">Directed by <strong>{{ spotlight.director_name }}</strong> · Shared by @{{ spotlight.creator_username }}</p>
+        <p class="spotlight-desc">{{ spotlight.description[:180] }}{% if spotlight.description|length > 180 %}...{% endif %}</p>
+        
+        <div class="spotlight-actions-bar">
+          <a href="{{ url_for('shorts.detail', short_id=spotlight.id) }}" class="btn btn-small btn-primary-play">
+            ▶ Watch Film
+          </a>
+          <a href="{{ url_for('watch_party.create', short_id=spotlight.id) }}" class="btn-ghost btn-small" title="Watch with friends in a synchronized party room">
+            🎉 Host Watch Party
+          </a>
+          <span class="spotlight-stats-pill">🔥 {{ spotlight.total_reactions }} reactions · 💬 {{ spotlight.total_comments }} discussions · 👁️ {{ spotlight.views_count }} views</span>
+        </div>
+      </div>
+    </section>
+  {% endif %}
+
+  <!-- Filter & Command Bar -->
+  <div class="unified-command-bar shorts-command-bar">
+    <form method="get" action="{{ url_for('shorts.index') }}" class="command-bar-main-row">
+      <div class="search-input-wrapper">
+        <span class="search-input-icon">🔍</span>
+        <input type="text"
+               name="q"
+               class="search-input-field"
+               value="{{ search_q }}"
+               placeholder="Search short films, directors, genres..."
+               autocomplete="off">
+        {% if search_q %}
+          <a href="{{ url_for('shorts.index', genre=active_genre, sort=active_sort) }}" class="search-clear-btn" title="Clear search">✕</a>
+        {% endif %}
+      </div>
+      <button type="submit" class="btn-search-submit">Search</button>
+
+      <!-- Genre Pills -->
+      <div class="command-category-tabs shorts-genre-tabs">
+        <a href="{{ url_for('shorts.index', q=search_q, sort=active_sort) }}" class="{{ 'active' if not active_genre }}">All</a>
+        {% for g in genres_list %}
+          <a href="{{ url_for('shorts.index', genre=g, q=search_q, sort=active_sort) }}" class="{{ 'active' if active_genre == g }}">
+            {{ g }}
+          </a>
+        {% endfor %}
+      </div>
+
+      <!-- Sorting dropdown / tabs -->
+      <div class="shorts-sort-group">
+        <label for="sort-select" class="sort-label">Sort:</label>
+        <select name="sort" id="sort-select" class="sort-select-dropdown" onchange="this.form.submit()">
+          <option value="newest" {{ 'selected' if active_sort == 'newest' }}>✨ Newest</option>
+          <option value="popular" {{ 'selected' if active_sort == 'popular' }}>🔥 Most Loved</option>
+          <option value="discussed" {{ 'selected' if active_sort == 'discussed' }}>💬 Most Discussed</option>
+          <option value="views" {{ 'selected' if active_sort == 'views' }}>👁️ Most Viewed</option>
+        </select>
+      </div>
+    </form>
+  </div>
+
+  <!-- Films Grid -->
+  {% if shorts %}
+    <div class="shorts-grid">
+      {% for film in shorts %}
+        <article class="short-film-card">
+          <div class="short-card-media">
+            <a href="{{ url_for('shorts.detail', short_id=film.id) }}" class="short-card-thumb-link">
+              {% if film.thumbnail_url %}
+                <img src="{{ film.thumbnail_url }}" alt="{{ film.title }}" loading="lazy" class="short-thumb-img">
+              {% else %}
+                <div class="short-card-placeholder">🎬</div>
+              {% endif %}
+              <div class="short-card-overlay">
+                <span class="short-play-icon">▶</span>
+              </div>
+            </a>
+            <span class="short-card-duration">{{ film.duration }}</span>
+          </div>
+
+          <div class="short-card-body">
+            <div class="short-card-meta-top">
+              <span class="short-genre-tag">{{ film.genre_tags.split(',')[0] }}</span>
+              <span class="short-views-count">👁️ {{ film.views_count }}</span>
+            </div>
+
+            <h3 class="short-card-title">
+              <a href="{{ url_for('shorts.detail', short_id=film.id) }}">{{ film.title }}</a>
+            </h3>
+
+            <p class="short-card-director">
+              By <strong>{{ film.director_name }}</strong>
+            </p>
+
+            <div class="short-card-footer">
+              <div class="short-card-reactions-summary">
+                <span title="Total Community Reactions">🔥 {{ film.total_reactions }}</span>
+                <span title="Discussion Comments">💬 {{ film.total_comments }}</span>
+              </div>
+
+              <div class="short-card-actions">
+                <a href="{{ url_for('shorts.detail', short_id=film.id) }}" class="btn-micro" title="Watch film & join discussion">
+                  Watch
+                </a>
+                <a href="{{ url_for('watch_party.create', short_id=film.id) }}" class="btn-micro btn-micro-party" title="Watch with friends in live party room">
+                  🎉 Party
+                </a>
+              </div>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>No short films found matching your search or filter.</p>
+      <p class="empty-sub">Be the first to upload and premiere your film to the community!</p>
+      {% if g.user %}
+        <a href="{{ url_for('shorts.upload') }}" class="btn btn-small" style="margin-top: 0.8rem;">+ Upload Film</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-small" style="margin-top: 0.8rem;">Log in to Upload</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

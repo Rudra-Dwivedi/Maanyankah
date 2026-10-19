@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+{% block title %}{{ short.title }} ({{ short.duration }}) — Community Short Films{% endblock %}
+
+{% block content %}
+<div class="container page shorts-detail-page">
+
+  <!-- Breadcrumbs -->
+  <nav class="detail-breadcrumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('shorts.index') }}" class="breadcrumb-link">Short Films</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ short.title }}</span>
+  </nav>
+
+  <!-- Cinema Player Showcase Frame -->
+  <section class="short-player-container">
+    <div class="short-video-wrapper">
+      {% if video_info.video_type == 'html5' %}
+        <video controls
+               playsinline
+               preload="metadata"
+               poster="{{ short.thumbnail_url or '' }}"
+               class="short-html5-player"
+               id="mainVideoPlayer">
+          <source src="{{ video_info.raw_url }}" type="video/mp4">
+          Your browser does not support the video player.
+        </video>
+      {% elif video_info.video_type == 'youtube' %}
+        <iframe src="{{ video_info.embed_url }}"
+                id="mainVideoPlayer"
+                title="{{ short.title }}"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+                class="short-iframe-player"></iframe>
+      {% elif video_info.video_type == 'vimeo' %}
+        <iframe src="{{ video_info.embed_url }}"
+                id="mainVideoPlayer"
+                title="{{ short.title }}"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowfullscreen
+                class="short-iframe-player"></iframe>
+      {% else %}
+        <iframe src="{{ video_info.embed_url }}"
+                id="mainVideoPlayer"
+                title="{{ short.title }}"
+                allowfullscreen
+                class="short-iframe-player"></iframe>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Title, Director & Watch Party Bar -->
+  <section class="short-hero-meta-section">
+    <div class="short-title-block">
+      <div class="short-meta-top-row">
+        <span class="badge-duration-hero">⏱️ {{ short.duration }}</span>
+        <span class="short-view-counter">👁️ {{ short.views_count }} views</span>
+        <span class="short-date-text">Premiered {{ short.created_at[:10] }}</span>
+      </div>
+
+      <h1 class="short-main-title">{{ short.title }}</h1>
+
+      <div class="short-creator-credit">
+        <div class="creator-avatar-wrap">
+          {% if short.creator_avatar %}
+            <img src="{{ short.creator_avatar }}" alt="{{ short.creator_username }}" class="creator-avatar-img">
+          {% else %}
+            <span class="creator-avatar-letter">{{ short.creator_username[0]|upper }}</span>
+          {% endif %}
+        </div>
+        <div class="creator-info-text">
+          <span class="director-name">Directed by <strong>{{ short.director_name }}</strong></span>
+          <span class="creator-handle">Shared by @{{ short.creator_username }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions: Host Watch Party -->
+    <div class="short-hero-actions">
+      <a href="{{ url_for('watch_party.create', short_id=short.id) }}" class="btn btn-party-launch" title="Invite friends to watch this short film synchronously with live chat">
+        🎉 Host Watch Party
+      </a>
+      {% if g.user and (g.user['id'] == short.user_id or g.user['role'] == 'admin') %}
+        <form method="post" action="{{ url_for('shorts.delete', short_id=short.id) }}" onsubmit="return confirm('Are you sure you want to remove this short film?');" style="display: inline;">
+          <button type="submit" class="btn-ghost btn-small text-danger">Delete</button>
+        </form>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Reactions Bar -->
+  <section class="short-reactions-bar-card">
+    <div class="reactions-bar-heading">
+      <span class="reactions-title-icon">✨</span>
+      <strong>Community Film Reactions</strong>
+      <span class="reactions-hint">Click any emotion to react:</span>
+    </div>
+
+    <div class="reactions-pills-row" id="reactionsPillsRow">
+      {% for code, emoji, label in reaction_types %}
+        {% set is_active = code in user_reactions %}
+        {% set cnt = reaction_counts.get(code, 0) %}
+        <button type="button"
+                class="short-reaction-btn {{ 'active' if is_active }}"
+                data-code="{{ code }}"
+                onclick="toggleShortReaction('{{ code }}')"
+                title="{{ label }}">
+          <span class="rxn-emoji">{{ emoji }}</span>
+          <span class="rxn-label">{{ label }}</span>
+          <span class="rxn-count" id="rxn-count-{{ code }}">{{ cnt }}</span>
+        </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Two-Column Layout: Synopsis & Discussion -->
+  <div class="short-content-layout">
+    
+    <!-- Left: Discussion Thread -->
+    <div class="short-discussion-col">
+      <div class="detail-card discussion-card">
+        <div class="discussion-card-header">
+          <h2 class="detail-card-heading">
+            💬 Discussions & Critiques <span class="tab-badge-cnt" id="commentsCount">{{ comments|length }}</span>
+          </h2>
+        </div>
+
+        <!-- Composer -->
+        {% if g.user %}
+          <form method="post" action="{{ url_for('shorts.comment', short_id=short.id) }}" class="short-comment-composer" id="shortCommentForm">
+            <textarea name="content"
+                      id="commentInput"
+                      rows="3"
+                      class="comment-textarea"
+                      required
+                      placeholder="Share your thoughts on the cinematography, acting, sound, or story..."></textarea>
+            
+            <div class="comment-composer-bottom">
+              <div class="timestamp-tagger">
+                <span class="tagger-icon">⏱️</span>
+                <input type="text"
+                       name="timestamp_mark"
+                       id="timestampMarkInput"
+                       class="timestamp-input"
+                       placeholder="Timestamp (e.g. 02:15)">
+                <button type="button" class="btn-ghost btn-micro" onclick="captureCurrentTime()" title="Tag current video player time">
+                  Use current time
+                </button>
+              </div>
+
+              <button type="submit" class="btn btn-small" id="submitCommentBtn">
+                Post Reflection
+              </button>
+            </div>
+          </form>
+        {% else %}
+          <div class="login-prompt-banner">
+            <p><a href="{{ url_for('auth.login') }}">Log in</a> to join the conversation and share your feedback on this film.</p>
+          </div>
+        {% endif %}
+
+        <!-- Comments List -->
+        <div class="comments-stream-list" id="commentsList">
+          {% if comments %}
+            {% for c in comments %}
+              <div class="short-comment-item">
+                <div class="comment-author-avatar">
+                  {% if c.avatar_url %}
+                    <img src="{{ c.avatar_url }}" alt="{{ c.username }}" class="c-avatar-img">
+                  {% else %}
+                    <span class="c-avatar-letter">{{ c.username[0]|upper }}</span>
+                  {% endif %}
+                </div>
+                <div class="comment-item-body">
+                  <div class="comment-header-row">
+                    <strong class="comment-author-name">@{{ c.username }}</strong>
+                    {% if c.timestamp_mark %}
+                      <span class="comment-timestamp-badge" title="Timestamp in film">⏱️ {{ c.timestamp_mark }}</span>
+                    {% endif %}
+                    <span class="comment-date-meta">{{ c.created_at[:10] }}</span>
+                  </div>
+                  <p class="comment-text-content">{{ c.content }}</p>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="no-comments-msg" id="noCommentsMsg">No reflections yet. Be the first to share your thoughts!</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Synopsis, Tags & Related -->
+    <div class="short-sidebar-col">
+      <div class="detail-card">
+        <h3 class="sidebar-heading">📖 Synopsis & Filmmaker Note</h3>
+        <p class="short-synopsis-text">
+          {{ short.description or "No description provided for this film." }}
+        </p>
+
+        <div class="short-genres-list" style="margin-top: 1rem;">
+          <span class="sidebar-sub-label">Genres:</span>
+          <div class="genres-chips-wrap">
+            {% for tag in short.genre_tags.split(',') %}
+              <a href="{{ url_for('shorts.index', genre=tag.strip()) }}" class="genre-tag-chip">
+                #{{ tag.strip() }}
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Watch Party Card -->
+      <div class="detail-card party-promo-card">
+        <h3 class="sidebar-heading">🎉 Watch with Friends</h3>
+        <p class="text-muted-sm">Launch a synchronized watch party room with live chat and reaction bursts.</p>
+        <a href="{{ url_for('watch_party.create', short_id=short.id) }}" class="btn btn-party-start-block">
+          Start Party Room
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// Capture video timestamp if HTML5 video is playing
+function captureCurrentTime() {
+  var video = document.getElementById('mainVideoPlayer');
+  var input = document.getElementById('timestampMarkInput');
+  if (video && video.currentTime) {
+    var totalSec = Math.floor(video.currentTime);
+    var mins = Math.floor(totalSec / 60);
+    var secs = totalSec % 60;
+    input.value = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+  }
+}
+
+// Toggle Reaction AJAX
+function toggleShortReaction(reactionCode) {
+  {% if not g.user %}
+    window.location.href = "{{ url_for('auth.login') }}";
+    return;
+  {% endif %}
+
+  var fd = new FormData();
+  fd.append('reaction', reactionCode);
+
+  fetch("{{ url_for('shorts.react', short_id=short.id) }}", {
+    method: 'POST',
+    body: fd,
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.success) {
+      var btn = document.querySelector('.short-reaction-btn[data-code="' + reactionCode + '"]');
+      var cntElem = document.getElementById('rxn-count-' + reactionCode);
+      if (btn && cntElem) {
+        if (data.is_active) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+        cntElem.textContent = data.count;
+      }
+    }
+  })
+  .catch(function(err) {
+    console.error('Reaction error:', err);
+  });
+}
+
+// AJAX comment submission
+document.addEventListener('DOMContentLoaded', function() {
+  var form = document.getElementById('shortCommentForm');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var input = document.getElementById('commentInput');
+      var tsInput = document.getElementById('timestampMarkInput');
+      var content = input.value.trim();
+      var ts = tsInput.value.trim();
+
+      if (!content) return;
+
+      var fd = new FormData();
+      fd.append('content', content);
+      if (ts) fd.append('timestamp_mark', ts);
+
+      var btn = document.getElementById('submitCommentBtn');
+      btn.disabled = true;
+
+      fetch("{{ url_for('shorts.comment', short_id=short.id) }}", {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        btn.disabled = false;
+        if (data.success) {
+          input.value = '';
+          tsInput.value = '';
+
+          var noMsg = document.getElementById('noCommentsMsg');
+          if (noMsg) noMsg.remove();
+
+          var list = document.getElementById('commentsList');
+          var item = document.createElement('div');
+          item.className = 'short-comment-item new-comment-pop';
+
+          var avatarHtml = data.avatar_url
+            ? '<img src="' + data.avatar_url + '" alt="' + data.username + '" class="c-avatar-img">'
+            : '<span class="c-avatar-letter">' + data.username.charAt(0).toUpperCase() + '</span>';
+
+          var tsBadge = data.timestamp_mark
+            ? '<span class="comment-timestamp-badge">⏱️ ' + data.timestamp_mark + '</span>'
+            : '';
+
+          item.innerHTML =
+            '<div class="comment-author-avatar">' + avatarHtml + '</div>' +
+            '<div class="comment-item-body">' +
+              '<div class="comment-header-row">' +
+                '<strong class="comment-author-name">@' + data.username + '</strong>' +
+                tsBadge +
+                '<span class="comment-date-meta">Just now</span>' +
+              '</div>' +
+              '<p class="comment-text-content">' + data.content + '</p>' +
+            '</div>';
+
+          list.insertBefore(item, list.firstChild);
+
+          var cntElem = document.getElementById('commentsCount');
+          if (cntElem) {
+            var curr = parseInt(cntElem.textContent) || 0;
+            cntElem.textContent = curr + 1;
+          }
+        }
+      })
+      .catch(function(err) {
+        btn.disabled = false;
+        console.error('Comment error:', err);
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

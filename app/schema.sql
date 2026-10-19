@@ -220,3 +220,85 @@ CREATE TABLE IF NOT EXISTS sports_highlight_votes (
     UNIQUE(user_id, item_id, highlight_type)
 );
 
+-- 🎥 Community Short Films & Indie Cinema Section
+CREATE TABLE IF NOT EXISTS short_films (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    director_name TEXT,
+    duration TEXT,               -- e.g. "8 min", "14 min"
+    genre_tags TEXT,             -- e.g. "Sci-Fi, Drama, Animation"
+    video_url TEXT NOT NULL,     -- File path or YouTube / Vimeo URL
+    video_type TEXT NOT NULL DEFAULT 'youtube' CHECK (video_type IN ('youtube', 'vimeo', 'html5', 'embed')),
+    thumbnail_url TEXT,
+    views_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Quick reactions on short films (🔥, ❤️, 🤯, 👏, 🎬, 🏆)
+CREATE TABLE IF NOT EXISTS short_film_reactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    short_id INTEGER NOT NULL REFERENCES short_films(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reaction TEXT NOT NULL CHECK (reaction IN ('fire', 'love', 'mindblown', 'applause', 'cinema', 'masterpiece')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(short_id, user_id, reaction)
+);
+
+-- Community comments and timestamped film discussions
+CREATE TABLE IF NOT EXISTS short_film_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    short_id INTEGER NOT NULL REFERENCES short_films(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    timestamp_mark TEXT,         -- e.g. "02:15"
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 🎉 Watch Parties across Movies, Music, and Sports
+CREATE TABLE IF NOT EXISTS watch_parties (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    host_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
+    short_film_id INTEGER REFERENCES short_films(id) ON DELETE SET NULL,
+    category TEXT NOT NULL CHECK (category IN ('movie', 'song', 'sports')),
+    title TEXT NOT NULL,
+    description TEXT,
+    video_url TEXT NOT NULL,
+    video_type TEXT NOT NULL DEFAULT 'youtube' CHECK (video_type IN ('youtube', 'vimeo', 'html5', 'embed')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'ended')),
+    current_time REAL NOT NULL DEFAULT 0.0,
+    is_playing INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Live Watch Party chat stream
+CREATE TABLE IF NOT EXISTS watch_party_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    party_id INTEGER NOT NULL REFERENCES watch_parties(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    timestamp_marker REAL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Live Watch Party floating reaction bursts
+CREATE TABLE IF NOT EXISTS watch_party_reactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    party_id INTEGER NOT NULL REFERENCES watch_parties(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    emoji TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Active Watch Party room members / attendees
+CREATE TABLE IF NOT EXISTS watch_party_members (
+    party_id INTEGER NOT NULL REFERENCES watch_parties(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (party_id, user_id)
+);
+
+

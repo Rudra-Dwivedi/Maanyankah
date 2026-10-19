@@ -26,6 +26,8 @@ def create_app(config_class=Config):
     from app.routes.agent import bp as agent_bp
     from app.routes.collections import bp as collections_bp
     from app.routes.leaderboard import bp as leaderboard_bp
+    from app.routes.shorts import bp as shorts_bp
+    from app.routes.watch_party import bp as watch_party_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(items_bp)
@@ -36,10 +38,24 @@ def create_app(config_class=Config):
     app.register_blueprint(agent_bp)
     app.register_blueprint(collections_bp)
     app.register_blueprint(leaderboard_bp)
+    app.register_blueprint(shorts_bp)
+    app.register_blueprint(watch_party_bp)
 
     @app.route("/")
     def index():
         return render_template("index.html", user=g.user)
+
+    @app.route("/short-films")
+    @app.route("/short-films/")
+    def short_films_shortcut():
+        from flask import redirect, url_for
+        return redirect(url_for("shorts.index"))
+
+    @app.route("/watch-party")
+    @app.route("/watch-party/")
+    def watch_party_shortcut():
+        from flask import redirect, url_for
+        return redirect(url_for("watch_party.index"))
 
     @app.route("/movies")
     @app.route("/movies/")

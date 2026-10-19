@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Upload Short Film — मान्यांकः (Maanyankah){% endblock %}
+
+{% block content %}
+<div class="container page">
+
+  <!-- Breadcrumbs -->
+  <nav class="detail-breadcrumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('shorts.index') }}" class="breadcrumb-link">Short Films</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Upload Film</span>
+  </nav>
+
+  <div class="shorts-upload-container">
+    <div class="page-head page-head-compact">
+      <h1>Submit Your Short Film 🎬</h1>
+      <p class="page-sub">Share your original short movies, animated stories, or indie passion projects with fellow cinema lovers.</p>
+    </div>
+
+    <form method="post" action="{{ url_for('shorts.upload') }}" enctype="multipart/form-data" class="shorts-upload-form">
+      <div class="form-grid-two-col">
+        
+        <!-- Left Column: Video & Media Source -->
+        <div class="upload-media-card">
+          <h2 class="upload-section-title">1. Video Source</h2>
+          <p class="upload-section-hint">Upload a video file directly OR provide an online streaming link (YouTube, Vimeo, MP4).</p>
+
+          <!-- Toggle: File vs Online Link -->
+          <div class="video-source-tabs" role="tablist">
+            <button type="button" class="btn-source-tab active" id="tab-btn-link" onclick="switchVideoSource('link')">
+              🔗 Online Video Link (Recommended)
+            </button>
+            <button type="button" class="btn-source-tab" id="tab-btn-file" onclick="switchVideoSource('file')">
+              📁 Upload Video File
+            </button>
+          </div>
+
+          <!-- Option A: Online Video Link -->
+          <div id="source-link-group" class="source-input-panel">
+            <label for="video_url" class="form-label">Video URL (YouTube, Vimeo, or Direct MP4):</label>
+            <input type="url"
+                   name="video_url"
+                   id="video_url"
+                   class="form-control"
+                   placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/...">
+            <span class="form-field-hint">Supports YouTube, Vimeo, or direct cloud MP4 streaming links.</span>
+          </div>
+
+          <!-- Option B: Direct File Upload -->
+          <div id="source-file-group" class="source-input-panel" style="display: none;">
+            <label for="video_file" class="form-label">Upload Video File:</label>
+            <input type="file"
+                   name="video_file"
+                   id="video_file"
+                   class="form-control-file"
+                   accept="video/mp4,video/webm,video/ogg,video/quicktime">
+            <span class="form-field-hint">Supported formats: MP4, WEBM, MOV, OGG (Max recommended 100MB).</span>
+          </div>
+
+          <!-- Thumbnail Poster -->
+          <div class="upload-thumbnail-section" style="margin-top: 1.5rem;">
+            <h2 class="upload-section-title">2. Cover Poster / Thumbnail</h2>
+            <label for="thumbnail_file" class="form-label">Custom Poster File (Optional):</label>
+            <input type="file"
+                   name="thumbnail_file"
+                   id="thumbnail_file"
+                   class="form-control-file"
+                   accept="image/*">
+            <div style="margin-top: 0.6rem;">
+              <label for="thumbnail_url" class="form-label">Or Image URL:</label>
+              <input type="url"
+                     name="thumbnail_url"
+                     id="thumbnail_url"
+                     class="form-control"
+                     placeholder="https://... (Leave blank to auto-detect from YouTube)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Metadata & Synopsis -->
+        <div class="upload-meta-card">
+          <h2 class="upload-section-title">3. Film Details & Credits</h2>
+
+          <div class="form-group">
+            <label for="title" class="form-label">Film Title *</label>
+            <input type="text"
+                   name="title"
+                   id="title"
+                   class="form-control"
+                   required
+                   placeholder="e.g. Echoes of the Horizon">
+          </div>
+
+          <div class="form-row-compact">
+            <div class="form-group flex-1">
+              <label for="director_name" class="form-label">Director / Creator Name</label>
+              <input type="text"
+                     name="director_name"
+                     id="director_name"
+                     class="form-control"
+                     value="{{ g.user['username'] }}"
+                     placeholder="Filmmaker name">
+            </div>
+
+            <div class="form-group" style="width: 140px;">
+              <label for="duration" class="form-label">Duration</label>
+              <input type="text"
+                     name="duration"
+                     id="duration"
+                     class="form-control"
+                     placeholder="e.g. 7 min">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="genre_tags" class="form-label">Genres & Tags</label>
+            <input type="text"
+                   name="genre_tags"
+                   id="genre_tags"
+                   class="form-control"
+                   placeholder="e.g. Sci-Fi, Drama, Mystery">
+            <span class="form-field-hint">Separate with commas (e.g. Animation, Comedy, Thriller).</span>
+          </div>
+
+          <div class="form-group">
+            <label for="description" class="form-label">Synopsis & Filmmaker Note</label>
+            <textarea name="description"
+                      id="description"
+                      rows="5"
+                      class="form-control"
+                      placeholder="Give viewers context: the logline, behind-the-scenes story, camera kit used, or themes explored..."></textarea>
+          </div>
+
+          <div class="upload-submit-row">
+            <button type="submit" class="btn btn-primary-submit">
+              🎬 Premiere Short Film
+            </button>
+            <a href="{{ url_for('shorts.index') }}" class="link-muted">Cancel</a>
+          </div>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<script>
+function switchVideoSource(mode) {
+  var linkPanel = document.getElementById('source-link-group');
+  var filePanel = document.getElementById('source-file-group');
+  var linkBtn = document.getElementById('tab-btn-link');
+  var fileBtn = document.getElementById('tab-btn-file');
+
+  if (mode === 'link') {
+    linkPanel.style.display = 'block';
+    filePanel.style.display = 'none';
+    linkBtn.classList.add('active');
+    fileBtn.classList.remove('active');
+  } else {
+    linkPanel.style.display = 'none';
+    filePanel.style.display = 'block';
+    linkBtn.classList.remove('active');
+    fileBtn.classList.add('active');
+  }
+}
+</script>
+{% endblock %}

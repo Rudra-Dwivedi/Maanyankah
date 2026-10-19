@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% block title %}{{ party.title }} — Live Watch Party{% endblock %}
+
+{% block content %}
+<div class="container page party-room-page">
+
+  <!-- Party Top Command Bar -->
+  <header class="party-top-bar">
+    <div class="party-bar-left">
+      <a href="{{ url_for('watch_party.index') }}" class="btn-ghost btn-micro" title="Back to Lobby">
+        ← Lobby
+      </a>
+      <span class="party-cat-chip cat-{{ party.category }}">
+        {% if party.category == 'movie' %}🎬 Movie{% elif party.category == 'song' %}🎵 Music{% else %}🏆 Sports{% endif %}
+      </span>
+      <h1 class="party-room-title">{{ party.title }}</h1>
+      <span class="party-live-pill" id="liveViewersPill">
+        <span class="live-dot-pulse"></span> <span id="viewersCountVal">{{ active_members|length }}</span> watching
+      </span>
+    </div>
+
+    <div class="party-bar-right">
+      <button type="button" class="btn-ghost btn-micro" id="copyInviteBtn" onclick="copyPartyLink()" title="Copy invite link to share with friends">
+        📋 Copy Invite Link
+      </button>
+
+      {% if is_host %}
+        <span class="host-badge-indicator" title="You are the room host. Your play/pause controls sync all viewers.">
+          👑 Host
+        </span>
+        <form method="post" action="{{ url_for('watch_party.end_party', party_id=party.id) }}" onsubmit="return confirm('End this watch party for everyone?');" style="display: inline;">
+          <button type="submit" class="btn-ghost btn-micro text-danger">End Party</button>
+        </form>
+      {% else %}
+        <span class="host-credit-pill">Host: @{{ party.host_username }}</span>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- Main Theater Grid -->
+  <div class="party-theater-layout">
+
+    <!-- Video Stage & Controls Column -->
+    <div class="party-stage-col">
+      
+      <!-- Video Player Frame with Floating Reactions Overlay -->
+      <div class="party-video-container" id="videoContainer">
+        <!-- Floating Reaction Bursts Container -->
+        <div class="reaction-burst-overlay" id="reactionOverlay" aria-hidden="true"></div>
+
+        {% if video_info.video_type == 'html5' %}
+          <video id="partyPlayer"
+                 class="party-video-element"
+                 controls
+                 playsinline
+                 preload="metadata">
+            <source src="{{ video_info.raw_url }}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        {% elif video_info.video_type == 'youtube' %}
+          <iframe id="partyPlayer"
+                  class="party-iframe-element"
+                  src="{{ video_info.embed_url }}"
+                  title="{{ party.title }}"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen></iframe>
+        {% elif video_info.video_type == 'vimeo' %}
+          <iframe id="partyPlayer"
+                  class="party-iframe-element"
+                  src="{{ video_info.embed_url }}"
+                  title="{{ party.title }}"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowfullscreen></iframe>
+        {% else %}
+          <iframe id="partyPlayer"
+                  class="party-iframe-element"
+                  src="{{ video_info.embed_url }}"
+                  title="{{ party.title }}"
+                  allowfullscreen></iframe>
+        {% endif %}
+      </div>
+
+      <!-- Sync Status & Viewer Action Strip -->
+      <div class="party-stage-toolbar">
+        <div class="stage-sync-indicator">
+          {% if is_host %}
+            <span class="sync-status-text" id="syncStatus">⚡ Broadcasting as Host</span>
+            <button type="button" class="btn-micro" id="btnBroadcastSync" onclick="broadcastHostSync()">
+              Sync All Viewers Now
+            </button>
+          {% else %}
+            <span class="sync-status-text" id="syncStatus">🟢 Connected to Host Stream</span>
+            <button type="button" class="btn-micro btn-resync" onclick="manualResyncToHost()" title="Snap player directly to host's current timestamp">
+              🔄 Sync with Host
+            </button>
+          {% endif %}
+        </div>
+
+        <!-- Linked Item / Short Info -->
+        <div class="stage-linked-meta">
+          {% if party.item_title %}
+            <span class="stage-info-pill">Item: <strong>{{ party.item_title }}</strong></span>
+          {% elif party.short_title %}
+            <span class="stage-info-pill">Short Film: <strong>{{ party.short_title }}</strong></span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Quick Floating Reaction Bursts Bar -->
+      <div class="party-reactions-strip">
+        <span class="reactions-strip-label">Reaction Bursts:</span>
+        <div class="party-emojis-cluster">
+          {% for em in party_emojis %}
+            <button type="button"
+                    class="btn-emoji-burst"
+                    onclick="fireReactionBurst('{{ em }}')"
+                    title="Send {{ em }} reaction burst to the party">
+              {{ em }}
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Host Note / Description Card -->
+      {% if party.description %}
+        <div class="party-description-box">
+          <strong class="desc-heading">Host Note:</strong>
+          <p class="desc-content">{{ party.description }}</p>
+        </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Live Chat & Attendees Column -->
+    <div class="party-chat-col">
+      <div class="party-chat-card">
+        
+        <!-- Chat Header: Active Attendees Preview -->
+        <div class="party-chat-header">
+          <div class="chat-header-title">
+            <span class="chat-icon">💬</span>
+            <strong>Live Party Chat</strong>
+          </div>
+          <div class="attendees-mini-avatars" id="attendeesTray">
+            {% for m in active_members[:5] %}
+              <div class="mini-att-avatar {{ 'host-ring' if m.is_host }}" title="@{{ m.username }}{% if m.is_host %} (Host){% endif %}">
+                {% if m.avatar_url %}
+                  <img src="{{ m.avatar_url }}" alt="{{ m.username }}">
+                {% else %}
+                  {{ m.username[0]|upper }}
+                {% endif %}
+              </div>
+            {% endfor %}
+            {% if active_members|length > 5 %}
+              <span class="att-more-count">+{{ active_members|length - 5 }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Chat Messages Stream -->
+        <div class="party-messages-stream" id="messagesStream">
+          {% for msg in messages %}
+            <div class="party-msg-item {{ 'msg-from-host' if msg.is_host_msg }} {{ 'my-msg' if g.user and msg.user_id == g.user['id'] }}" data-msg-id="{{ msg.id }}">
+              <div class="msg-avatar">
+                {% if msg.avatar_url %}
+                  <img src="{{ msg.avatar_url }}" alt="{{ msg.username }}" class="msg-av-img">
+                {% else %}
+                  <span class="msg-av-letter">{{ msg.username[0]|upper }}</span>
+                {% endif %}
+              </div>
+              <div class="msg-bubble">
+                <div class="msg-meta-row">
+                  <span class="msg-author">{{ msg.username }}</span>
+                  {% if msg.is_host_msg %}
+                    <span class="host-tag-micro">HOST</span>
+                  {% endif %}
+                  {% if msg.timestamp_marker is not none %}
+                    <span class="msg-timestamp-pill" title="Moment in video">⏱️ {{ '%02d:%02d'|format((msg.timestamp_marker // 60)|int, (msg.timestamp_marker % 60)|int) }}</span>
+                  {% endif %}
+                  <span class="msg-time">{{ msg.created_at[-8:-3] if msg.created_at else '' }}</span>
+                </div>
+                <div class="msg-content">{{ msg.content }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Chat Composer -->
+        {% if g.user %}
+          <form class="party-chat-composer" id="partyChatForm" onsubmit="sendChatMessage(event)">
+            <input type="text"
+                   id="chatInput"
+                   class="chat-text-input"
+                   placeholder="Chat with everyone in the room..."
+                   autocomplete="off"
+                   required>
+            <button type="submit" class="btn-chat-send" id="btnSendChat" title="Send message">
+              ➤
+            </button>
+          </form>
+        {% else %}
+          <div class="chat-login-prompt">
+            <a href="{{ url_for('auth.login') }}" class="link-underline">Log in to chat</a> with the party.
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+var partyId = {{ party.id }};
+var isHost = {{ 'true' if is_host else 'false' }};
+var lastMsgId = 0;
+var lastRxnId = 0;
+var hostCurrentTime = {{ party.current_time or 0.0 }};
+var hostIsPlaying = {{ 'true' if party.is_playing else 'false' }};
+
+// Initialize highest message ID
+document.querySelectorAll('.party-msg-item').forEach(function(el) {
+  var mid = parseInt(el.getAttribute('data-msg-id'), 10);
+  if (mid && mid > lastMsgId) lastMsgId = mid;
+});
+
+// Scroll chat to bottom on load
+function scrollChatToBottom() {
+  var stream = document.getElementById('messagesStream');
+  if (stream) stream.scrollTop = stream.scrollHeight;
+}
+scrollChatToBottom();
+
+// Copy Invite Link
+function copyPartyLink() {
+  var url = window.location.href;
+  navigator.clipboard.writeText(url).then(function() {
+    var btn = document.getElementById('copyInviteBtn');
+    var original = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(function() { btn.textContent = original; }, 2000);
+  });
+}
+
+// Floating Reaction Bursts Animation
+function spawnFloatingEmoji(emoji) {
+  var container = document.getElementById('reactionOverlay');
+  if (!container) return;
+
+  var span = document.createElement('span');
+  span.className = 'floating-burst-emoji';
+  span.textContent = emoji;
+
+  // Randomize horizontal trajectory
+  var randX = Math.floor(Math.random() * 80) + 10; // 10% to 90%
+  span.style.left = randX + '%';
+
+  container.appendChild(span);
+
+  setTimeout(function() {
+    if (span && span.parentNode) span.parentNode.removeChild(span);
+  }, 2200);
+}
+
+// Send Reaction Burst
+function fireReactionBurst(emoji) {
+  {% if not g.user %}
+    window.location.href = "{{ url_for('auth.login') }}";
+    return;
+  {% endif %}
+
+  // Show locally right away for instant responsiveness
+  spawnFloatingEmoji(emoji);
+
+  var fd = new FormData();
+  fd.append('emoji', emoji);
+
+  fetch("{{ url_for('watch_party.post_reaction', party_id=party.id) }}", {
+    method: 'POST',
+    body: fd,
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  });
+}
+
+// Send Chat Message
+function sendChatMessage(e) {
+  e.preventDefault();
+  var input = document.getElementById('chatInput');
+  var content = input.value.trim();
+  if (!content) return;
+
+  var fd = new FormData();
+  fd.append('content', content);
+
+  // Capture video timestamp marker if available
+  var player = document.getElementById('partyPlayer');
+  if (player && player.currentTime) {
+    fd.append('timestamp_marker', player.currentTime);
+  }
+
+  input.value = '';
+
+  fetch("{{ url_for('watch_party.post_message', party_id=party.id) }}", {
+    method: 'POST',
+    body: fd,
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success && data.message) {
+      appendChatMessage(data.message, true);
+    }
+  });
+}
+
+// Append chat message item
+function appendChatMessage(msg, isMyMsg) {
+  if (document.querySelector('.party-msg-item[data-msg-id="' + msg.id + '"]')) return;
+  if (msg.id > lastMsgId) lastMsgId = msg.id;
+
+  var stream = document.getElementById('messagesStream');
+  var div = document.createElement('div');
+  div.className = 'party-msg-item ' + (msg.is_host_msg ? 'msg-from-host ' : '') + (isMyMsg ? 'my-msg' : '');
+  div.setAttribute('data-msg-id', msg.id);
+
+  var avHtml = msg.avatar_url
+    ? '<img src="' + msg.avatar_url + '" alt="' + msg.username + '" class="msg-av-img">'
+    : '<span class="msg-av-letter">' + msg.username.charAt(0).toUpperCase() + '</span>';
+
+  var hostBadge = msg.is_host_msg ? '<span class="host-tag-micro">HOST</span>' : '';
+  
+  var tsBadge = '';
+  if (msg.timestamp_marker !== null && msg.timestamp_marker !== undefined) {
+    var secs = Math.floor(msg.timestamp_marker);
+    var m = Math.floor(secs / 60);
+    var s = secs % 60;
+    tsBadge = '<span class="msg-timestamp-pill">⏱️ ' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + '</span>';
+  }
+
+  div.innerHTML =
+    '<div class="msg-avatar">' + avHtml + '</div>' +
+    '<div class="msg-bubble">' +
+      '<div class="msg-meta-row">' +
+        '<span class="msg-author">' + msg.username + '</span>' +
+        hostBadge +
+        tsBadge +
+        '<span class="msg-time">Just now</span>' +
+      '</div>' +
+      '<div class="msg-content">' + msg.content + '</div>' +
+    '</div>';
+
+  stream.appendChild(div);
+  scrollChatToBottom();
+}
+
+// Host sync broadcaster
+function broadcastHostSync() {
+  if (!isHost) return;
+  var player = document.getElementById('partyPlayer');
+  var t = 0;
+  var isPlaying = 1;
+
+  if (player && player.currentTime !== undefined) {
+    t = player.currentTime;
+    isPlaying = player.paused ? 0 : 1;
+  }
+
+  var fd = new FormData();
+  fd.append('current_time', t);
+  fd.append('is_playing', isPlaying);
+
+  fetch("{{ url_for('watch_party.control', party_id=party.id) }}", {
+    method: 'POST',
+    body: fd,
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  }).then(function() {
+    var stat = document.getElementById('syncStatus');
+    if (stat) {
+      stat.textContent = '✓ Broadcasted to all viewers!';
+      setTimeout(function() { stat.textContent = '⚡ Broadcasting as Host'; }, 2000);
+    }
+  });
+}
+
+// Viewer manual resync to host timestamp
+function manualResyncToHost() {
+  var player = document.getElementById('partyPlayer');
+  if (player && player.currentTime !== undefined) {
+    player.currentTime = hostCurrentTime;
+    if (hostIsPlaying && player.paused) player.play();
+  }
+  var stat = document.getElementById('syncStatus');
+  if (stat) {
+    stat.textContent = '✓ Synced with host!';
+    setTimeout(function() { stat.textContent = '🟢 Connected to Host Stream'; }, 2000);
+  }
+}
+
+// Polling loop (every 2.5 seconds)
+function pollPartySync() {
+  fetch("{{ url_for('watch_party.sync', party_id=party.id) }}?last_msg_id=" + lastMsgId + "&last_rxn_id=" + lastRxnId)
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.status === 'ended') {
+      alert('The host has ended this watch party.');
+      window.location.href = "{{ url_for('watch_party.index') }}";
+      return;
+    }
+
+    // 1. Process new chat messages
+    if (data.messages && data.messages.length > 0) {
+      data.messages.forEach(function(m) {
+        appendChatMessage(m, false);
+      });
+    }
+
+    // 2. Process floating reaction bursts from other viewers
+    if (data.reactions && data.reactions.length > 0) {
+      data.reactions.forEach(function(r) {
+        if (r.id > lastRxnId) lastRxnId = r.id;
+        spawnFloatingEmoji(r.emoji);
+      });
+    }
+
+    // 3. Update active viewers count
+    if (data.viewers_count !== undefined) {
+      var cntVal = document.getElementById('viewersCountVal');
+      if (cntVal) cntVal.textContent = data.viewers_count;
+    }
+
+    // 4. Update host state for attendees
+    if (!isHost) {
+      hostCurrentTime = data.current_time || 0.0;
+      hostIsPlaying = data.is_playing;
+    }
+  })
+  .catch(function(e) {
+    console.debug('Party sync poll:', e);
+  });
+}
+
+// Start polling
+setInterval(pollPartySync, 2500);
+
+// Host auto-broadcast on play / pause / seek (HTML5 video player)
+if (isHost) {
+  var hostVideo = document.getElementById('partyPlayer');
+  if (hostVideo && hostVideo.addEventListener) {
+    hostVideo.addEventListener('play', broadcastHostSync);
+    hostVideo.addEventListener('pause', broadcastHostSync);
+    hostVideo.addEventListener('seeked', broadcastHostSync);
+  }
+}
+</script>
+{% endblock %}

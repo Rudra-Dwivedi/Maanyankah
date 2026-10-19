@@ -97,9 +97,9 @@
             ▶ Watch Trailer
           </button>
         {% endif %}
-        <a href="{{ url_for('watch_party.create', item_id=item.id) }}" class="btn btn-party-start-btn" title="Host a live Watch Party for {{ item.title }} with friends">
-          🎉 Watch Party
-        </a>
+        <button type="button" class="btn btn-party-start-btn" onclick="window.switchDetailTab ? window.switchDetailTab('pane-watch-party') : null" title="Watch Party lounge for {{ item.title }}">
+          🎉 Watch Party {% if item_parties %}<span class="badge-live-pulse-sm">LIVE</span>{% endif %}
+        </button>
         {% if item.type == 'movie' %}
           <button type="button" class="btn btn-soothing-jump" onclick="window.switchDetailTab ? window.switchDetailTab('pane-write-review') : document.getElementById('soothing-review-card')?.scrollIntoView({behavior: 'smooth'})">
             ✍️ Review Movie
@@ -139,6 +139,9 @@
       <div class="detail-nav-tabs" role="tablist">
         <button type="button" class="detail-tab-btn active" data-tab-target="pane-overview" role="tab" aria-selected="true">
           📖 Overview & Synopsis
+        </button>
+        <button type="button" class="detail-tab-btn" data-tab-target="pane-watch-party" role="tab" aria-selected="false">
+          🎉 Watch Party {% if item_parties %}<span class="tab-badge-cnt badge-live-cnt">LIVE ({{ item_parties|length }})</span>{% endif %}
         </button>
         {% if item.type == 'movie' and trailer %}
           <button type="button" class="detail-tab-btn" data-tab-target="pane-trailer" role="tab" aria-selected="false">
@@ -184,6 +187,186 @@
                 <strong>Core Themes & Craft:</strong> {{ details.themes }}
               </div>
             {% endif %}
+
+            <!-- Embedded Live Watch Party Lounge inside Movie Description -->
+            <div class="desc-watch-party-card" id="desc-watch-party-block">
+              <div class="desc-wp-header">
+                <div class="desc-wp-title-area">
+                  <span class="desc-wp-icon">🎉</span>
+                  <div>
+                    <h3 class="desc-wp-heading">Live Watch Party & Screening Room</h3>
+                    <p class="desc-wp-subtitle">
+                      {% if item_parties %}
+                        Live rooms are active right now! Join fellow fans or start your own room.
+                      {% else %}
+                        Watch {{ item.title }} live in sync with fellow cinephiles with real-time chat & reactions.
+                      {% endif %}
+                    </p>
+                  </div>
+                </div>
+                <div class="desc-wp-badges">
+                  {% if item_parties %}
+                    <span class="badge-live-beacon">
+                      <span class="beacon-pulse"></span> LIVE ({{ item_parties|length }})
+                    </span>
+                  {% else %}
+                    <span class="badge-ready-beacon">Ready to Stream</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Key party features micro-row -->
+              <div class="desc-wp-features-row">
+                <span class="desc-wp-feat-tag">⏱️ Synced Play/Pause</span>
+                <span class="desc-wp-feat-tag">💬 Real-Time Live Chat</span>
+                <span class="desc-wp-feat-tag">🍿 Floating Reaction Bursts</span>
+                <span class="desc-wp-feat-tag">👥 Invite Friends</span>
+              </div>
+
+              {% if item_parties %}
+                <!-- Active Screening Rooms List -->
+                <div class="desc-wp-active-rooms">
+                  <h4 class="desc-wp-rooms-heading">🔴 Active Screening Rooms for {{ item.title }}</h4>
+                  <div class="desc-wp-rooms-list">
+                    {% for party in item_parties %}
+                      <div class="desc-wp-room-row">
+                        <div class="desc-wp-room-info">
+                          <div class="desc-wp-room-title-line">
+                            <strong class="desc-wp-room-name">{{ party.title }}</strong>
+                            <span class="badge-viewer-count">👥 {{ party.active_viewers or 1 }} watching</span>
+                          </div>
+                          <div class="desc-wp-room-meta">
+                            <span class="desc-wp-host">Hosted by <strong>@{{ party.host_username }}</strong></span>
+                            {% if party.total_messages %}
+                              <span class="desc-wp-msg-count">💬 {{ party.total_messages }} msgs</span>
+                            {% endif %}
+                          </div>
+                        </div>
+                        <div class="desc-wp-room-action">
+                          <a href="{{ url_for('watch_party.room', party_id=party.id) }}" class="btn btn-party-join-sm">
+                            ▶ Join Room
+                          </a>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+
+              <!-- Action Bar / 1-Click Launch -->
+              <div class="desc-wp-action-footer">
+                {% if g.user %}
+                  <form method="POST" action="{{ url_for('watch_party.create') }}" class="desc-wp-quick-launch-form">
+                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                    <input type="hidden" name="category" value="{{ item.type }}">
+                    <input type="hidden" name="title" value="{{ item.title }} Watch Party 🍿">
+                    <button type="submit" class="btn btn-party-instant-btn">
+                      🚀 {% if item_parties %}Host Another Screening Room{% else %}Start a Live Watch Party Now{% endif %}
+                    </button>
+                    <a href="{{ url_for('watch_party.create', item_id=item.id) }}" class="btn-ghost btn-small">
+                      ⚙️ Custom Video / Settings
+                    </a>
+                  </form>
+                {% else %}
+                  <div class="desc-wp-guest-row">
+                    <a href="{{ url_for('auth.login', next=request.path) }}" class="btn btn-party-instant-btn">
+                      🔑 Log In to Host a Watch Party
+                    </a>
+                    <span class="text-muted-xs">Anyone can join existing rooms, or log in to create your own!</span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Tab Pane: Dedicated Watch Party Lounge -->
+      <div class="detail-tab-pane" id="pane-watch-party">
+        <section class="detail-card detail-watch-party-pane">
+          <div class="detail-watch-party-header">
+            <div>
+              <h2 class="detail-card-heading">🎉 {{ item.title }} Watch Party Lounge</h2>
+              <p class="section-lead-sm">
+                Watch in real time with synced playback, live fan chat, and animated floating reactions.
+              </p>
+            </div>
+            {% if g.user %}
+              <a href="{{ url_for('watch_party.create', item_id=item.id) }}" class="btn btn-primary btn-small">
+                + Create Custom Screening Room
+              </a>
+            {% endif %}
+          </div>
+
+          {% if item_parties %}
+            <div class="wp-pane-rooms-grid">
+              {% for party in item_parties %}
+                <div class="wp-pane-room-card">
+                  <div class="wp-pane-room-top">
+                    <span class="badge-live-beacon"><span class="beacon-pulse"></span> LIVE NOW</span>
+                    <span class="badge-viewer-count">👥 {{ party.active_viewers or 1 }} viewers</span>
+                  </div>
+                  <h3 class="wp-pane-room-title">{{ party.title }}</h3>
+                  {% if party.description %}
+                    <p class="wp-pane-room-desc">{{ party.description }}</p>
+                  {% endif %}
+                  <div class="wp-pane-room-footer">
+                    <div class="wp-pane-room-host">
+                      {% if party.host_avatar %}
+                        <img src="{{ party.host_avatar }}" alt="{{ party.host_username }}" class="avatar-tiny">
+                      {% else %}
+                        <span class="avatar-letter-tiny">{{ party.host_username[0]|upper }}</span>
+                      {% endif %}
+                      <span>@{{ party.host_username }}</span>
+                    </div>
+                    <a href="{{ url_for('watch_party.room', party_id=party.id) }}" class="btn btn-primary btn-small">
+                      ▶ Join Party
+                    </a>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="wp-pane-empty-state">
+              <span class="wp-pane-empty-icon">🍿</span>
+              <h3>No Active Watch Parties Right Now</h3>
+              <p class="text-muted-sm">Be the first to host a screening room for {{ item.title }}! Invite friends or let the community join in.</p>
+              {% if g.user %}
+                <form method="POST" action="{{ url_for('watch_party.create') }}" style="margin-top: 1rem;">
+                  <input type="hidden" name="item_id" value="{{ item.id }}">
+                  <input type="hidden" name="category" value="{{ item.type }}">
+                  <input type="hidden" name="title" value="{{ item.title }} Watch Party 🍿">
+                  <button type="submit" class="btn btn-primary">
+                    🚀 Launch 1-Click Watch Party
+                  </button>
+                </form>
+              {% else %}
+                <div style="margin-top: 1rem;">
+                  <a href="{{ url_for('auth.login', next=request.path) }}" class="btn btn-primary">
+                    Log In to Start a Watch Party
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <!-- Watch party guide / tips -->
+          <div class="wp-pane-guide-box">
+            <h4>💡 How Watch Parties Work</h4>
+            <div class="wp-guide-steps">
+              <div class="wp-step-item">
+                <span class="wp-step-num">1</span>
+                <div><strong>Synchronized Stream</strong>: The host controls play/pause and timestamp so all viewers are at the exact same scene.</div>
+              </div>
+              <div class="wp-step-item">
+                <span class="wp-step-num">2</span>
+                <div><strong>Live Community Chat</strong>: Discuss twists, cinematography, and dialogue in real time without missing a beat.</div>
+              </div>
+              <div class="wp-step-item">
+                <span class="wp-step-num">3</span>
+                <div><strong>Floating Reaction Bursts</strong>: Click emoji reactions to send floating celebratory bursts across everyone's screen.</div>
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -1255,6 +1438,12 @@
     else if (hash === '#pane-craft') window.switchDetailTab('pane-craft');
     else if (hash === '#pane-audio') window.switchDetailTab('pane-audio');
     else if (hash === '#pane-sports-arena') window.switchDetailTab('pane-sports-arena');
+    else if (hash === '#pane-watch-party' || hash === '#watch-party') window.switchDetailTab('pane-watch-party');
+    else if (hash === '#desc-watch-party-block') {
+      window.switchDetailTab('pane-overview');
+      var wpEl = document.getElementById('desc-watch-party-block');
+      if (wpEl) wpEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   }
 })();
 </script>

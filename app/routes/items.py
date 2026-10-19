@@ -510,6 +510,20 @@ def detail(item_id):
     related_items = with_image_urls(related_rows)
     trailer_info = resolve_movie_trailer(item_dict, db=db) if item_dict["type"] == "movie" else None
 
+    # Active Watch Parties for this item
+    item_parties = db.execute(
+        """
+        SELECT wp.*, u.username as host_username, u.avatar_url as host_avatar,
+               (SELECT COUNT(*) FROM watch_party_members m WHERE m.party_id = wp.id AND m.last_seen >= datetime('now', '-3 minutes')) as active_viewers,
+               (SELECT COUNT(*) FROM watch_party_messages msg WHERE msg.party_id = wp.id) as total_messages
+        FROM watch_parties wp
+        JOIN users u ON wp.host_id = u.id
+        WHERE wp.item_id = ? AND wp.status = 'active'
+        ORDER BY active_viewers DESC, wp.created_at DESC
+        """,
+        (item_id,),
+    ).fetchall()
+
     return render_template(
         "item_detail.html",
         item=item_dict,
@@ -535,6 +549,7 @@ def detail(item_id):
         comments=comments,
         related_items=related_items,
         trailer=trailer_info,
+        item_parties=item_parties,
     )
 
 

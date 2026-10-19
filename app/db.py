@@ -92,51 +92,111 @@ def init_db(app):
                 )
 
 
+        # Auto-provision or migrate default admin account to 'Rudra' with password 'Rudra@8318'
+        # Can still be overridden by Railway environment variables (ADMIN_USERNAME / ADMIN_PASSWORD) if set
+        admin_user = os.environ.get("ADMIN_USERNAME", "Rudra").strip()
+        admin_pass = os.environ.get("ADMIN_PASSWORD", "Rudra@8318").strip()
+        admin_email = os.environ.get("ADMIN_EMAIL", f"{admin_user.lower()}@fannetwork.local").strip()
+
+        # If a legacy 'admin' user exists and target is 'Rudra', migrate that legacy account
+        if admin_user.lower() == "rudra":
+            cursor.execute("SELECT id FROM users WHERE LOWER(username) = 'admin'")
+            legacy_admin = cursor.fetchone()
+            if legacy_admin:
+                cursor.execute(
+                    "UPDATE users SET username = ?, email = ?, password_hash = ?, role = 'admin' WHERE id = ?",
+                    (admin_user, admin_email, generate_password_hash(admin_pass), legacy_admin[0]),
+                )
+
+        cursor.execute("SELECT id, role FROM users WHERE LOWER(username) = LOWER(?)", (admin_user,))
+        existing_admin = cursor.fetchone()
+        if not existing_admin:
+            cursor.execute(
+                "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'admin')",
+                (admin_user, admin_email, generate_password_hash(admin_pass)),
+            )
+            admin_id = cursor.lastrowid
+        else:
+            admin_id = existing_admin[0]
+            cursor.execute(
+                "UPDATE users SET username = ?, password_hash = ?, role = 'admin' WHERE id = ?",
+                (admin_user, generate_password_hash(admin_pass), admin_id),
+            )
+
+        # Migration: Purge legacy demo seed users (asha, rohan, priya, vikram, filmmaker)
+        demo_usernames = ("asha", "rohan", "priya", "vikram", "filmmaker")
+        ph = ",".join("?" * len(demo_usernames))
+        cursor.execute(f"SELECT id FROM users WHERE LOWER(username) IN ({ph})", [u.lower() for u in demo_usernames])
+        demo_user_ids = [r[0] for r in cursor.fetchall()]
+
+        if demo_user_ids:
+            uid_ph = ",".join("?" * len(demo_user_ids))
+            # Reassign curated collections, short films, and watch parties to Rudra
+            cursor.execute(f"UPDATE collections SET user_id = ? WHERE user_id IN ({uid_ph})", [admin_id] + demo_user_ids)
+            cursor.execute(f"UPDATE short_films SET user_id = ? WHERE user_id IN ({uid_ph})", [admin_id] + demo_user_ids)
+            cursor.execute(f"UPDATE watch_parties SET host_id = ? WHERE host_id IN ({uid_ph})", [admin_id] + demo_user_ids)
+
+            # Delete demo user rows from all referencing tables
+            for tbl, col in [
+                ("user_preferences", "user_id"),
+                ("posts", "user_id"),
+                ("follows", "follower_id"),
+                ("follows", "followed_id"),
+                ("group_members", "user_id"),
+                ("groups", "created_by"),
+                ("post_reactions", "user_id"),
+                ("collection_bookmarks", "user_id"),
+                ("collection_comments", "user_id"),
+                ("movie_aspect_ratings", "user_id"),
+                ("item_mood_tags", "user_id"),
+                ("song_evaluations", "user_id"),
+                ("item_quick_reactions", "user_id"),
+                ("sports_match_ratings", "user_id"),
+                ("sports_player_ratings", "user_id"),
+                ("sports_predictions", "user_id"),
+                ("sports_highlight_votes", "user_id"),
+                ("short_film_reactions", "user_id"),
+                ("short_film_comments", "user_id"),
+                ("watch_party_messages", "user_id"),
+                ("watch_party_reactions", "user_id"),
+                ("watch_party_members", "user_id"),
+            ]:
+                cursor.execute(f"DELETE FROM {tbl} WHERE {col} IN ({uid_ph})", demo_user_ids)
+
+            cursor.execute(f"DELETE FROM users WHERE id IN ({uid_ph})", demo_user_ids)
+
         # Seed initial curated collections if collections table is empty
         cursor.execute("SELECT COUNT(*) FROM collections")
         if cursor.fetchone()[0] == 0:
-            cursor.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1")
-            first_user = cursor.fetchone()
-            if first_user:
-                uid = first_user[0]
-                # Collection 1: Essential Cinematic Journeys
-                cursor.execute(
-                    "INSERT INTO collections (user_id, title, description, is_public) VALUES (?, ?, ?, 1)",
-                    (uid, "Essential Cinematic Journeys", "Mind-bending masterpieces and modern cinema cornerstones."),
-                )
-                cid1 = cursor.lastrowid
-                for movie_title in ["Inception", "Interstellar", "The Dark Knight", "Parasite"]:
-                    cursor.execute("SELECT id FROM items WHERE title = ?", (movie_title,))
-                    item_row = cursor.fetchone()
-                    if item_row:
-                        cursor.execute("INSERT OR IGNORE INTO collection_items (collection_id, item_id) VALUES (?, ?)", (cid1, item_row[0]))
+            uid = admin_id
+            # Collection 1: Essential Cinematic Journeys
+            cursor.execute(
+                "INSERT INTO collections (user_id, title, description, is_public) VALUES (?, ?, ?, 1)",
+                (uid, "Essential Cinematic Journeys", "Mind-bending masterpieces and modern cinema cornerstones."),
+            )
+            cid1 = cursor.lastrowid
+            for movie_title in ["Inception", "Interstellar", "The Dark Knight", "Parasite"]:
+                cursor.execute("SELECT id FROM items WHERE title = ?", (movie_title,))
+                item_row = cursor.fetchone()
+                if item_row:
+                    cursor.execute("INSERT OR IGNORE INTO collection_items (collection_id, item_id) VALUES (?, ?)", (cid1, item_row[0]))
 
-                # Collection 2: Night Drive & Synth Vibes
-                cursor.execute(
-                    "INSERT INTO collections (user_id, title, description, is_public) VALUES (?, ?, ?, 1)",
-                    (uid, "Night Drive & High Energy", "Electronic beats, modern disco, and timeless anthems."),
-                )
-                cid2 = cursor.lastrowid
-                for song_title in ["Blinding Lights — The Weeknd", "Starboy — The Weeknd", "Get Lucky — Daft Punk", "Bohemian Rhapsody — Queen"]:
-                    cursor.execute("SELECT id FROM items WHERE title = ?", (song_title,))
-                    item_row = cursor.fetchone()
-                    if item_row:
-                        cursor.execute("INSERT OR IGNORE INTO collection_items (collection_id, item_id) VALUES (?, ?)", (cid2, item_row[0]))
+            # Collection 2: Night Drive & Synth Vibes
+            cursor.execute(
+                "INSERT INTO collections (user_id, title, description, is_public) VALUES (?, ?, ?, 1)",
+                (uid, "Night Drive & High Energy", "Electronic beats, modern disco, and timeless anthems."),
+            )
+            cid2 = cursor.lastrowid
+            for song_title in ["Blinding Lights — The Weeknd", "Starboy — The Weeknd", "Get Lucky — Daft Punk", "Bohemian Rhapsody — Queen"]:
+                cursor.execute("SELECT id FROM items WHERE title = ?", (song_title,))
+                item_row = cursor.fetchone()
+                if item_row:
+                    cursor.execute("INSERT OR IGNORE INTO collection_items (collection_id, item_id) VALUES (?, ?)", (cid2, item_row[0]))
 
         # Seed initial curated short films if short_films table is empty
         cursor.execute("SELECT COUNT(*) FROM short_films")
         if cursor.fetchone()[0] == 0:
-            cursor.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1")
-            first_user = cursor.fetchone()
-            if not first_user:
-                cursor.execute(
-                    "INSERT INTO users (username, email, password_hash, role) VALUES ('filmmaker', 'filmmaker@fannetwork.local', ?, 'user')",
-                    (generate_password_hash("filmmaker123"),),
-                )
-                creator_id = cursor.lastrowid
-            else:
-                creator_id = first_user[0]
-
+            creator_id = admin_id
             demo_shorts = [
                 (
                     creator_id,
@@ -183,7 +243,6 @@ def init_db(app):
                     s,
                 )
                 short_id = cursor.lastrowid
-                # Seed initial reaction and comment for realistic community feel
                 cursor.execute("INSERT OR IGNORE INTO short_film_reactions (short_id, user_id, reaction) VALUES (?, ?, 'fire')", (short_id, creator_id))
                 cursor.execute("INSERT OR IGNORE INTO short_film_reactions (short_id, user_id, reaction) VALUES (?, ?, 'cinema')", (short_id, creator_id))
                 cursor.execute(
@@ -194,77 +253,45 @@ def init_db(app):
         # Seed initial public watch parties if watch_parties table is empty
         cursor.execute("SELECT COUNT(*) FROM watch_parties")
         if cursor.fetchone()[0] == 0:
-            cursor.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1")
-            first_user = cursor.fetchone()
-            if first_user:
-                host_uid = first_user[0]
-                # 1. Movie Party
-                cursor.execute("SELECT id FROM items WHERE title = 'Inception' LIMIT 1")
-                mov = cursor.fetchone()
-                mov_id = mov[0] if mov else None
-                cursor.execute(
-                    """INSERT INTO watch_parties 
-                       (host_id, item_id, category, title, description, video_url, video_type, status)
-                       VALUES (?, ?, 'movie', 'Late Night Inception Crew 🍿', 'Mind-bending cinema watch lounge. Come discuss the dream levels in real time!', 'https://www.youtube.com/watch?v=YoHD9XEInc0', 'youtube', 'active')""",
-                    (host_uid, mov_id),
-                )
-                wp1 = cursor.lastrowid
-                cursor.execute("INSERT INTO watch_party_messages (party_id, user_id, content) VALUES (?, ?, 'Welcome to the watch party! Grab your popcorn 🍿')", (wp1, host_uid))
-
-                # 2. Music Party
-                cursor.execute("SELECT id FROM items WHERE title LIKE 'Blinding Lights%' LIMIT 1")
-                song = cursor.fetchone()
-                song_id = song[0] if song else None
-                cursor.execute(
-                    """INSERT INTO watch_parties 
-                       (host_id, item_id, category, title, description, video_url, video_type, status)
-                       VALUES (?, ?, 'song', 'Synthwave & Midnight Rhythms 🎵', 'Vibing to The Weeknd and high-energy music videos together. Drop reaction bursts!', 'https://www.youtube.com/watch?v=4NRXx6U8ABQ', 'youtube', 'active')""",
-                    (host_uid, song_id),
-                )
-                wp2 = cursor.lastrowid
-                cursor.execute("INSERT INTO watch_party_messages (party_id, user_id, content) VALUES (?, ?, 'This bassline never gets old 🔥')", (wp2, host_uid))
-
-                # 3. Sports Party
-                cursor.execute("SELECT id FROM items WHERE title = 'Real Madrid' LIMIT 1")
-                sp = cursor.fetchone()
-                sp_id = sp[0] if sp else None
-                cursor.execute(
-                    """INSERT INTO watch_parties 
-                       (host_id, item_id, category, title, description, video_url, video_type, status)
-                       VALUES (?, ?, 'sports', 'Real Madrid Epic UCL Thrillers 🏆', 'Rewatching iconic match turning points and miracle goals with passionate fans!', 'https://www.youtube.com/watch?v=qC50WbA-u3o', 'youtube', 'active')""",
-                    (host_uid, sp_id),
-                )
-                wp3 = cursor.lastrowid
-                cursor.execute("INSERT INTO watch_party_messages (party_id, user_id, content) VALUES (?, ?, 'What a match this was! Incredible intensity ⚽')", (wp3, host_uid))
-
-        # Auto-provision or migrate default admin account to 'Rudra' with password 'Rudra@8318'
-        # Can still be overridden by Railway environment variables (ADMIN_USERNAME / ADMIN_PASSWORD) if set
-        admin_user = os.environ.get("ADMIN_USERNAME", "Rudra").strip()
-        admin_pass = os.environ.get("ADMIN_PASSWORD", "Rudra@8318").strip()
-        admin_email = os.environ.get("ADMIN_EMAIL", f"{admin_user.lower()}@fannetwork.local").strip()
-
-        # If a legacy 'admin' user exists and target is 'Rudra', migrate that legacy account
-        if admin_user.lower() == "rudra":
-            cursor.execute("SELECT id FROM users WHERE LOWER(username) = 'admin'")
-            legacy_admin = cursor.fetchone()
-            if legacy_admin:
-                cursor.execute(
-                    "UPDATE users SET username = ?, email = ?, password_hash = ?, role = 'admin' WHERE id = ?",
-                    (admin_user, admin_email, generate_password_hash(admin_pass), legacy_admin[0]),
-                )
-
-        cursor.execute("SELECT id, role FROM users WHERE LOWER(username) = LOWER(?)", (admin_user,))
-        existing = cursor.fetchone()
-        if not existing:
+            host_uid = admin_id
+            # 1. Movie Party
+            cursor.execute("SELECT id FROM items WHERE title = 'Inception' LIMIT 1")
+            mov = cursor.fetchone()
+            mov_id = mov[0] if mov else None
             cursor.execute(
-                "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'admin')",
-                (admin_user, admin_email, generate_password_hash(admin_pass)),
+                """INSERT INTO watch_parties 
+                   (host_id, item_id, category, title, description, video_url, video_type, status)
+                   VALUES (?, ?, 'movie', 'Late Night Inception Crew 🍿', 'Mind-bending cinema watch lounge. Come discuss the dream levels in real time!', 'https://www.youtube.com/watch?v=YoHD9XEInc0', 'youtube', 'active')""",
+                (host_uid, mov_id),
             )
-        else:
+            wp1 = cursor.lastrowid
+            cursor.execute("INSERT INTO watch_party_messages (party_id, user_id, content) VALUES (?, ?, 'Welcome to the watch party! Grab your popcorn 🍿')", (wp1, host_uid))
+
+            # 2. Music Party
+            cursor.execute("SELECT id FROM items WHERE title LIKE 'Blinding Lights%' LIMIT 1")
+            song = cursor.fetchone()
+            song_id = song[0] if song else None
             cursor.execute(
-                "UPDATE users SET username = ?, password_hash = ?, role = 'admin' WHERE id = ?",
-                (admin_user, generate_password_hash(admin_pass), existing[0]),
+                """INSERT INTO watch_parties 
+                   (host_id, item_id, category, title, description, video_url, video_type, status)
+                   VALUES (?, ?, 'song', 'Synthwave & Midnight Rhythms 🎵', 'Vibing to The Weeknd and high-energy music videos together. Drop reaction bursts!', 'https://www.youtube.com/watch?v=4NRXx6U8ABQ', 'youtube', 'active')""",
+                (host_uid, song_id),
             )
+            wp2 = cursor.lastrowid
+            cursor.execute("INSERT INTO watch_party_messages (party_id, user_id, content) VALUES (?, ?, 'This bassline never gets old 🔥')", (wp2, host_uid))
+
+            # 3. Sports Party
+            cursor.execute("SELECT id FROM items WHERE title = 'Real Madrid' LIMIT 1")
+            sp = cursor.fetchone()
+            sp_id = sp[0] if sp else None
+            cursor.execute(
+                """INSERT INTO watch_parties 
+                   (host_id, item_id, category, title, description, video_url, video_type, status)
+                   VALUES (?, ?, 'sports', 'Real Madrid Epic UCL Thrillers 🏆', 'Rewatching iconic match turning points and miracle goals with passionate fans!', 'https://www.youtube.com/watch?v=qC50WbA-u3o', 'youtube', 'active')""",
+                (host_uid, sp_id),
+            )
+            wp3 = cursor.lastrowid
+            cursor.execute("INSERT INTO watch_party_messages (party_id, user_id, content) VALUES (?, ?, 'What a match this was! Incredible intensity ⚽')", (wp3, host_uid))
 
         db.commit()
         db.close()

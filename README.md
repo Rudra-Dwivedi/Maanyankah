@@ -96,8 +96,8 @@ Deploying मान्यांकः (Maanyankah) live to [Railway](https://rai
 3. **Configure Environment Variables** *(Recommended)*:
    In your Railway project dashboard, click on your service $\rightarrow$ **Variables** tab:
    - `SECRET_KEY`: Any secret random string for secure session encryption.
-   - `ADMIN_USERNAME`: Your chosen admin username (e.g. `admin`).
-   - `ADMIN_PASSWORD`: Your chosen admin password (e.g. `admin123`).
+   - `ADMIN_USERNAME`: Your chosen admin username (defaults to `Rudra`).
+   - `ADMIN_PASSWORD`: Your chosen admin password (defaults to `Rudra@8318`).
    *On first launch, Maanyankah will automatically provision your admin account and seed starter catalog items with HD artwork!*
 
 4. **Generate Public URL**:

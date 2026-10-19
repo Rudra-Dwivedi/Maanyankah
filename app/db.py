@@ -92,36 +92,50 @@ def init_db(app):
                 )
 
 
-        # Auto-provision or migrate default admin account to 'Rudra' with password 'Rudra@8318'
-        # Can still be overridden by Railway environment variables (ADMIN_USERNAME / ADMIN_PASSWORD) if set
-        admin_user = os.environ.get("ADMIN_USERNAME", "Rudra").strip()
-        admin_pass = os.environ.get("ADMIN_PASSWORD", "Rudra@8318").strip()
-        admin_email = os.environ.get("ADMIN_EMAIL", f"{admin_user.lower()}@fannetwork.local").strip()
+        # Ensure 'Rudra' with password 'Rudra@8318' ALWAYS exists as active admin
+        rudra_hash = generate_password_hash("Rudra@8318")
 
-        # If a legacy 'admin' user exists and target is 'Rudra', migrate that legacy account
-        if admin_user.lower() == "rudra":
-            cursor.execute("SELECT id FROM users WHERE LOWER(username) = 'admin'")
+        cursor.execute("SELECT id FROM users WHERE LOWER(TRIM(username)) = 'rudra'")
+        rudra_row = cursor.fetchone()
+        if rudra_row:
+            cursor.execute(
+                "UPDATE users SET username = 'Rudra', email = 'rudra@fannetwork.local', password_hash = ?, role = 'admin', is_active = 1 WHERE id = ?",
+                (rudra_hash, rudra_row[0]),
+            )
+            admin_id = rudra_row[0]
+        else:
+            # Check if legacy 'admin' user exists and rename it to Rudra
+            cursor.execute("SELECT id FROM users WHERE LOWER(TRIM(username)) = 'admin'")
             legacy_admin = cursor.fetchone()
             if legacy_admin:
                 cursor.execute(
-                    "UPDATE users SET username = ?, email = ?, password_hash = ?, role = 'admin' WHERE id = ?",
-                    (admin_user, admin_email, generate_password_hash(admin_pass), legacy_admin[0]),
+                    "UPDATE users SET username = 'Rudra', email = 'rudra@fannetwork.local', password_hash = ?, role = 'admin', is_active = 1 WHERE id = ?",
+                    (rudra_hash, legacy_admin[0]),
                 )
+                admin_id = legacy_admin[0]
+            else:
+                cursor.execute(
+                    "INSERT INTO users (username, email, password_hash, role, is_active) VALUES ('Rudra', 'rudra@fannetwork.local', ?, 'admin', 1)",
+                    (rudra_hash,),
+                )
+                admin_id = cursor.lastrowid
 
-        cursor.execute("SELECT id, role FROM users WHERE LOWER(username) = LOWER(?)", (admin_user,))
-        existing_admin = cursor.fetchone()
-        if not existing_admin:
-            cursor.execute(
-                "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'admin')",
-                (admin_user, admin_email, generate_password_hash(admin_pass)),
-            )
-            admin_id = cursor.lastrowid
-        else:
-            admin_id = existing_admin[0]
-            cursor.execute(
-                "UPDATE users SET username = ?, password_hash = ?, role = 'admin' WHERE id = ?",
-                (admin_user, generate_password_hash(admin_pass), admin_id),
-            )
+        # Also support any custom ADMIN_USERNAME / ADMIN_PASSWORD if configured in environment
+        custom_user = os.environ.get("ADMIN_USERNAME", "").strip()
+        custom_pass = os.environ.get("ADMIN_PASSWORD", "").strip()
+        if custom_user and custom_pass and custom_user.lower() != "rudra":
+            cursor.execute("SELECT id FROM users WHERE LOWER(TRIM(username)) = LOWER(?)", (custom_user,))
+            cust_row = cursor.fetchone()
+            if cust_row:
+                cursor.execute(
+                    "UPDATE users SET password_hash = ?, role = 'admin', is_active = 1 WHERE id = ?",
+                    (generate_password_hash(custom_pass), cust_row[0]),
+                )
+            else:
+                cursor.execute(
+                    "INSERT INTO users (username, email, password_hash, role, is_active) VALUES (?, ?, ?, 'admin', 1)",
+                    (custom_user, f"{custom_user.lower()}@fannetwork.local", generate_password_hash(custom_pass)),
+                )
 
         # Migration: Purge legacy demo seed users (asha, rohan, priya, vikram, filmmaker)
         demo_usernames = ("asha", "rohan", "priya", "vikram", "filmmaker")

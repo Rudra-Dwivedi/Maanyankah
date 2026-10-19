@@ -237,20 +237,34 @@ def init_db(app):
                 wp3 = cursor.lastrowid
                 cursor.execute("INSERT INTO watch_party_messages (party_id, user_id, content) VALUES (?, ?, 'What a match this was! Incredible intensity ⚽')", (wp3, host_uid))
 
-        # Optional auto-provision of admin via environment variables (e.g. Railway Variables)
-        admin_user = os.environ.get("ADMIN_USERNAME", "").strip()
-        admin_pass = os.environ.get("ADMIN_PASSWORD", "").strip()
-        if admin_user and admin_pass:
-            admin_email = os.environ.get("ADMIN_EMAIL", f"{admin_user}@fannetwork.local").strip()
-            cursor.execute("SELECT id, role FROM users WHERE username = ?", (admin_user,))
-            existing = cursor.fetchone()
-            if not existing:
+        # Auto-provision or migrate default admin account to 'Rudra' with password 'Rudra@8318'
+        # Can still be overridden by Railway environment variables (ADMIN_USERNAME / ADMIN_PASSWORD) if set
+        admin_user = os.environ.get("ADMIN_USERNAME", "Rudra").strip()
+        admin_pass = os.environ.get("ADMIN_PASSWORD", "Rudra@8318").strip()
+        admin_email = os.environ.get("ADMIN_EMAIL", f"{admin_user.lower()}@fannetwork.local").strip()
+
+        # If a legacy 'admin' user exists and target is 'Rudra', migrate that legacy account
+        if admin_user.lower() == "rudra":
+            cursor.execute("SELECT id FROM users WHERE LOWER(username) = 'admin'")
+            legacy_admin = cursor.fetchone()
+            if legacy_admin:
                 cursor.execute(
-                    "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'admin')",
-                    (admin_user, admin_email, generate_password_hash(admin_pass)),
+                    "UPDATE users SET username = ?, email = ?, password_hash = ?, role = 'admin' WHERE id = ?",
+                    (admin_user, admin_email, generate_password_hash(admin_pass), legacy_admin[0]),
                 )
-            elif existing[1] != "admin":
-                cursor.execute("UPDATE users SET role = 'admin' WHERE id = ?", (existing[0],))
+
+        cursor.execute("SELECT id, role FROM users WHERE LOWER(username) = LOWER(?)", (admin_user,))
+        existing = cursor.fetchone()
+        if not existing:
+            cursor.execute(
+                "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'admin')",
+                (admin_user, admin_email, generate_password_hash(admin_pass)),
+            )
+        else:
+            cursor.execute(
+                "UPDATE users SET username = ?, password_hash = ?, role = 'admin' WHERE id = ?",
+                (admin_user, generate_password_hash(admin_pass), existing[0]),
+            )
 
         db.commit()
         db.close()

@@ -22,9 +22,9 @@ from app.db import get_db
 
 def run():
     parser = argparse.ArgumentParser(description="Create or promote an admin account.")
-    parser.add_argument("--username", help="Admin username", default=os.environ.get("ADMIN_USERNAME"))
+    parser.add_argument("--username", help="Admin username", default=os.environ.get("ADMIN_USERNAME", "Rudra"))
     parser.add_argument("--email", help="Admin email", default=os.environ.get("ADMIN_EMAIL"))
-    parser.add_argument("--password", help="Admin password", default=os.environ.get("ADMIN_PASSWORD"))
+    parser.add_argument("--password", help="Admin password", default=os.environ.get("ADMIN_PASSWORD", "Rudra@8318"))
     args = parser.parse_args()
 
     app = create_app()
@@ -37,18 +37,22 @@ def run():
             return
 
         existing = db.execute(
-            "SELECT id, role FROM users WHERE username = ?", (username,)
+            "SELECT id, role FROM users WHERE LOWER(username) = LOWER(?)", (username,)
         ).fetchone()
 
         if existing:
-            if existing["role"] == "admin":
-                print(f"'{username}' is already an admin.")
-                return
-            db.execute(
-                "UPDATE users SET role = 'admin' WHERE id = ?", (existing["id"],)
-            )
+            new_password = args.password or getpass.getpass(f"New password for admin '{username}': ")
+            if new_password:
+                db.execute(
+                    "UPDATE users SET role = 'admin', password_hash = ? WHERE id = ?",
+                    (generate_password_hash(new_password), existing["id"]),
+                )
+            else:
+                db.execute(
+                    "UPDATE users SET role = 'admin' WHERE id = ?", (existing["id"],)
+                )
             db.commit()
-            print(f"Promoted existing user '{username}' to admin.")
+            print(f"Admin account '{username}' updated with new credentials.")
             return
 
         email = (args.email or input("Admin email: ")).strip() if not args.email else args.email.strip()
